@@ -1,0 +1,518 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1f6b47">
+<title>WayBack</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: one-screen app. Map fills the top (left on wide screens), a control panel with four modes sits below (right). */
+:root{
+  --bg:#eef1ec; --surface:#ffffff; --line:#d3dbd2; --fg:#14241c; --muted:#5b6b62;
+  --accent:#1f6b47; --accent-ink:#ffffff; --signal:#e9b52a; --warn:#c2402a; --warn-bg:#fbe7e2;
+  --map-bg:#f6f8f3; --map-grid:#e1e7de; --path:#1f6b47; --path-dim:#b9cbbf; --me:#2d6fd6; --trail:#e9b52a;
+  --f-display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --f-body:"Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1714; --surface:#16211c; --line:#2a3a32; --fg:#e6eee8; --muted:#97a89e;
+  --accent:#4fbf86; --accent-ink:#06140d; --signal:#f0c445; --warn:#f07a62; --warn-bg:#3a1d17;
+  --map-bg:#121c18; --map-grid:#1f2c26; --path:#4fbf86; --path-dim:#2e4a3b; --me:#6aa2ff; --trail:#f0c445;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1714; --surface:#16211c; --line:#2a3a32; --fg:#e6eee8; --muted:#97a89e;
+  --accent:#4fbf86; --accent-ink:#06140d; --signal:#f0c445; --warn:#f07a62; --warn-bg:#3a1d17;
+  --map-bg:#121c18; --map-grid:#1f2c26; --path:#4fbf86; --path-dim:#2e4a3b; --me:#6aa2ff; --trail:#f0c445;
+  color-scheme:dark}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.45;overflow:hidden}
+*{box-sizing:border-box}
+button,input,textarea{font:inherit;color:inherit}
+.app{height:100%;display:grid;grid-template-rows:auto minmax(0,1fr) auto;padding-left:max(12px, env(safe-area-inset-left, 0px));padding-right:max(12px, env(safe-area-inset-right, 0px));padding-block:10px;gap:10px;max-width:1200px;margin:0 auto}
+@media (min-width:900px){.app{grid-template-columns:minmax(0,1fr) 390px;grid-template-rows:auto minmax(0,1fr)}
+  header{grid-column:1 / -1}.panel{max-height:none!important;height:100%}}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0}
+.brand{display:flex;align-items:baseline;gap:10px;min-width:0}
+.brand h1{font-family:var(--f-display);font-weight:800;font-size:1.6rem;letter-spacing:-.02em;margin:0;line-height:1}
+.brand h1 span{color:var(--accent)}
+.brand p{margin:0;color:var(--muted);font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip{font-size:.78rem;padding:4px 10px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--muted);white-space:nowrap;max-width:46vw;overflow:hidden;text-overflow:ellipsis}
+.mapwrap{position:relative;min-height:0;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:var(--map-bg)}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+.mapctl{position:absolute;right:10px;bottom:10px;display:flex;flex-direction:column;gap:6px}
+.mapctl button{width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font-size:1.1rem;cursor:pointer}
+.maplabel{position:absolute;left:10px;top:10px;font-size:.75rem;color:var(--muted);background:color-mix(in srgb,var(--surface) 85%,transparent);padding:3px 8px;border-radius:6px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;display:flex;flex-direction:column;min-height:0;max-height:52vh}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--line)}
+.tabs button{background:none;border:0;padding:12px 4px 10px;font-weight:600;font-size:.88rem;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent}
+.tabs button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--signal)}
+.view{padding:14px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;min-height:0}
+.eyebrow{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.stat{display:flex;flex-direction:column;gap:2px;min-width:0}
+.stat b{font-family:var(--f-mono);font-weight:500;font-size:1.05rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+.stat small{color:var(--muted);font-size:.74rem}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--surface);padding:10px 14px;border-radius:10px;font-weight:600;cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.danger{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 40%,var(--line))}
+.btn.sm{padding:6px 10px;font-size:.84rem;border-radius:8px}
+.btn:disabled{opacity:.45;cursor:default}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+.note{font-size:.86rem;color:var(--muted)}
+.note.warn{color:var(--warn)}
+.status{display:flex;align-items:center;gap:8px;font-weight:600}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--muted)}
+.dot.live{background:var(--warn);animation:pulse 1.2s infinite}
+@keyframes pulse{50%{opacity:.3}}
+.trip{border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.trip.sel{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.trip h3{margin:0;font-size:1rem;font-weight:600;overflow-wrap:anywhere}
+.trip .meta{font-size:.82rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.tag{font-size:.7rem;font-weight:600;padding:1px 7px;border-radius:999px;background:var(--signal);color:#1d1600;margin-left:6px;vertical-align:2px}
+.trip input{border:1px solid var(--line);border-radius:8px;padding:6px 8px;background:var(--bg);width:100%}
+textarea{width:100%;min-height:70px;border:1px solid var(--line);border-radius:10px;padding:8px;background:var(--bg);font-family:var(--f-mono);font-size:.75rem;resize:vertical;overflow-wrap:anywhere}
+.code{font-family:var(--f-mono);font-size:.72rem;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px;max-height:90px;overflow:auto;overflow-wrap:anywhere;user-select:all}
+.big{font-family:var(--f-display);font-weight:800;font-size:1.55rem;line-height:1.15;letter-spacing:-.01em;text-wrap:balance;margin:0}
+.clock{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{border:0;background:none;padding:8px 11px;font-family:var(--f-mono);font-size:.82rem;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.stops{display:flex;flex-direction:column;gap:4px}
+.stops button{text-align:left;background:none;border:0;border-left:3px solid var(--signal);padding:4px 8px;cursor:pointer;font-size:.86rem}
+.guide{border-radius:12px;padding:14px;background:var(--bg);display:flex;flex-direction:column;gap:6px}
+.guide.off{background:var(--warn-bg)}
+.guide.off .big{color:var(--warn)}
+.bar{height:8px;border-radius:99px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);width:0}
+.empty{color:var(--muted);font-size:.9rem}
+@media (max-width:420px){.stats{grid-template-columns:repeat(2,1fr)}.brand p{display:none}}
+@media (prefers-reduced-motion:reduce){.dot.live{animation:none}}
+</style>
+<style>html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}img{max-width:100%}body{margin:0;-webkit-tap-highlight-color:transparent;user-select:none}textarea,input,.code{user-select:text}</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand"><h1>Way<span>Back</span></h1><p>Record once. Replay it. Find your way back.</p></div>
+    <div class="chip" id="chip">No trip selected</div>
+  </header>
+
+  <div class="mapwrap">
+    <canvas id="map" aria-label="Route map"></canvas>
+    <div class="maplabel" id="maplabel">Map</div>
+    <div class="mapctl">
+      <button id="zin" aria-label="Zoom in">+</button>
+      <button id="zout" aria-label="Zoom out">−</button>
+      <button id="zfit" aria-label="Fit route">⤢</button>
+    </div>
+  </div>
+
+  <section class="panel">
+    <nav class="tabs" role="tablist">
+      <button role="tab" data-tab="record" aria-selected="true">Record</button>
+      <button role="tab" data-tab="trips" aria-selected="false">Trips</button>
+      <button role="tab" data-tab="replay" aria-selected="false">Replay</button>
+      <button role="tab" data-tab="back" aria-selected="false">Guide me</button>
+    </nav>
+
+    <div class="view" id="v-record">
+      <div class="status"><span class="dot" id="recdot"></span><span id="recstatus">Ready to record</span></div>
+      <div class="stats">
+        <div class="stat"><b id="r-time">0:00:00</b><small>Time</small></div>
+        <div class="stat"><b id="r-dist">0 m</b><small>Distance</small></div>
+        <div class="stat"><b id="r-stops">0</b><small>Stops</small></div>
+        <div class="stat"><b id="r-fix">±— m</b><small>GPS accuracy</small></div>
+      </div>
+      <div class="row">
+        <button class="btn primary" id="recstart">Start recording</button>
+        <button class="btn" id="recdemo">Try a demo walk</button>
+        <button class="btn danger" id="recstop" hidden>Stop and save</button>
+      </div>
+      <p class="note" id="recnote">Walk your route with the screen on. WayBack saves a point every few metres and marks the places you stop for a minute or more. Everything stays on your phone.</p>
+    </div>
+
+    <div class="view" id="v-trips" hidden>
+      <div id="triplist" style="display:flex;flex-direction:column;gap:10px"></div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <span class="eyebrow">Open a shared trip</span>
+        <textarea id="importcode" placeholder="Paste a WayBack trip code here" aria-label="Trip code"></textarea>
+        <div class="row"><button class="btn sm" id="importbtn">Add trip</button><span class="note" id="importnote"></span></div>
+      </div>
+    </div>
+
+    <div class="view" id="v-replay" hidden>
+      <div id="rp-empty" class="empty">Pick a trip in Trips to watch it again.</div>
+      <div id="rp-body" hidden style="display:flex;flex-direction:column;gap:12px">
+        <div><span class="eyebrow" id="rp-name"></span><p class="big clock" id="rp-clock">—</p></div>
+        <div class="stats">
+          <div class="stat"><b id="rp-el">0:00:00</b><small>Elapsed</small></div>
+          <div class="stat"><b id="rp-dist">0 m</b><small>Covered</small></div>
+          <div class="stat"><b id="rp-total">0 m</b><small>Trip length</small></div>
+          <div class="stat"><b id="rp-pct">0%</b><small>Progress</small></div>
+        </div>
+        <input type="range" id="rp-scrub" min="0" max="1000" value="0" aria-label="Trip position">
+        <div class="row" style="align-items:center;justify-content:space-between">
+          <button class="btn primary" id="rp-play">Play</button>
+          <div class="seg" id="rp-speed">
+            <button data-s="1" aria-pressed="false">1×</button><button data-s="10" aria-pressed="false">10×</button><button data-s="30" aria-pressed="true">30×</button><button data-s="60" aria-pressed="false">60×</button>
+          </div>
+        </div>
+        <div><span class="eyebrow">Where you stopped</span><div class="stops" id="rp-stops"></div></div>
+      </div>
+    </div>
+
+    <div class="view" id="v-back" hidden>
+      <div id="bk-empty" class="empty">Pick a trip in Trips, then tap “Take me back”.</div>
+      <div id="bk-body" hidden style="display:flex;flex-direction:column;gap:12px">
+        <span class="eyebrow" id="bk-name"></span>
+        <div class="seg" id="bk-dir" role="group" aria-label="Direction"><button data-d="back" aria-pressed="true">Take me back</button><button data-d="there" aria-pressed="false">Go there again</button></div>
+        <div class="guide" id="bk-guide"><p class="big" id="bk-instr">Ready when you are</p><span class="note" id="bk-sub">WayBack will lead you along the path you took, in reverse.</span></div>
+        <div class="bar"><i id="bk-bar"></i></div>
+        <div class="stats">
+          <div class="stat"><b id="bk-left">—</b><small id="bk-leftlbl">To the start</small></div>
+          <div class="stat"><b id="bk-off">—</b><small>From path</small></div>
+          <div class="stat"><b id="bk-time">0:00:00</b><small>Walking</small></div>
+          <div class="stat"><b id="bk-src">—</b><small>Position</small></div>
+        </div>
+        <div class="row">
+          <button class="btn primary" id="bk-start">Guide me with GPS</button>
+          <button class="btn" id="bk-demo">Demo walk back</button>
+          <button class="btn danger" id="bk-end" hidden>End guidance</button>
+        </div>
+        <p class="note" id="bk-note">Works without data or signal. The route is already on your phone.</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+"use strict";
+const $=id=>document.getElementById(id);
+const R=6371000, toRad=d=>d*Math.PI/180, toDeg=r=>r*180/Math.PI;
+function dist(a,b){const dLat=toRad(b.lat-a.lat),dLon=toRad(b.lon-a.lon);const s=Math.sin(dLat/2)**2+Math.cos(toRad(a.lat))*Math.cos(toRad(b.lat))*Math.sin(dLon/2)**2;return 2*R*Math.asin(Math.min(1,Math.sqrt(s)));}
+function bearing(a,b){const y=Math.sin(toRad(b.lon-a.lon))*Math.cos(toRad(b.lat));const x=Math.cos(toRad(a.lat))*Math.sin(toRad(b.lat))-Math.sin(toRad(a.lat))*Math.cos(toRad(b.lat))*Math.cos(toRad(b.lon-a.lon));return (toDeg(Math.atan2(y,x))+360)%360;}
+function pathLen(pts){let s=0;for(let i=1;i<pts.length;i++)s+=dist(pts[i-1],pts[i]);return s;}
+function fmtDist(m){if(!isFinite(m))return "—";return m<1000?Math.round(m)+" m":(m/1000).toFixed(2)+" km";}
+function fmtDur(ms){ms=Math.max(0,ms|0);const s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return h+":"+String(m).padStart(2,"0")+":"+String(x).padStart(2,"0");}
+function fmtMin(ms){const m=Math.round(ms/60000);return m<1?"under a minute":m===1?"1 min":m+" min";}
+function fmtClock(t){return new Date(t).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"});}
+function fmtDate(t){return new Date(t).toLocaleString([], {weekday:"short",day:"numeric",month:"short",hour:"numeric",minute:"2-digit"});}
+const COMPASS=["north","north-east","east","south-east","south","south-west","west","north-west"];
+function compass(b){return COMPASS[Math.round(b/45)%8];}
+
+// Local metres projection around an origin
+function projector(o){const kx=Math.cos(toRad(o.lat))*111320,ky=110540;return {f:p=>({x:(p.lon-o.lon)*kx,y:(p.lat-o.lat)*ky}),inv:q=>({lat:o.lat+q.y/ky,lon:o.lon+q.x/kx})};}
+
+// Douglas–Peucker simplification in metres
+function simplify(pts,tol){if(pts.length<3)return pts.slice();const P=projector(pts[0]),xy=pts.map(P.f);const keep=new Uint8Array(pts.length);keep[0]=keep[pts.length-1]=1;const st=[[0,pts.length-1]];
+  while(st.length){const [a,b]=st.pop();let md=0,mi=-1;const A=xy[a],B=xy[b],dx=B.x-A.x,dy=B.y-A.y,L=Math.hypot(dx,dy)||1e-9;
+    for(let i=a+1;i<b;i++){const d=Math.abs(dy*xy[i].x-dx*xy[i].y+B.x*A.y-B.y*A.x)/L;if(d>md){md=d;mi=i;}}
+    if(md>tol&&mi>0){keep[mi]=1;st.push([a,mi],[mi,b]);}}
+  return pts.filter((_,i)=>keep[i]);}
+
+// ---------- storage ----------
+const KEY="wayback.trips.v1";
+let memStore=null;
+function loadTrips(){try{const s=localStorage.getItem(KEY);if(s)return JSON.parse(s);}catch(e){} return memStore||null;}
+function saveTrips(){memStore=S.trips;try{localStorage.setItem(KEY,JSON.stringify(S.trips));}catch(e){}}
+
+// ---------- trip builder (shared by GPS, demo and sample) ----------
+function newBuilder(){return {points:[],stops:[],anchor:null,open:null,last:null};}
+function feed(B,p){
+  if(!B.points.length){B.points.push(p);B.anchor=p;B.last=p;return;}
+  const lp=B.points[B.points.length-1];
+  if(dist(lp,p)>=5||p.t-lp.t>=15000)B.points.push(p);
+  B.last=p;
+  if(dist(B.anchor,p)>15){ if(B.open){B.open.to=p.t;B.stops.push(B.open);B.open=null;} B.anchor=p; }
+  else if(!B.open&&p.t-B.anchor.t>=60000){B.open={lat:B.anchor.lat,lon:B.anchor.lon,from:B.anchor.t,to:p.t};}
+  else if(B.open){B.open.to=p.t;}
+}
+function finish(B){const lp=B.points[B.points.length-1];if(B.last&&lp!==B.last)B.points.push(B.last);if(B.open){B.stops.push(B.open);B.open=null;}return {points:B.points,stops:B.stops};}
+function liveStops(B){return B.stops.length+(B.open?1:0);}
+
+// ---------- simulated walking (demo mode) ----------
+const ORIGIN={lat:9.01205,lon:7.57210};
+const SAMPLE_WP=[[0,0],[95,18],[150,40],[172,150],[160,290],[230,355],[350,362],[405,470],[520,515],[610,600]];
+function wpToLatLon(o,wps){const P=projector(o);return wps.map(([x,y])=>P.inv({x,y}));}
+function genFixes(path,opt){
+  const P=projector(path[0]),xy=path.map(P.f);const speed=opt.speed||1.3,step=opt.step||3;const out=[];let t=opt.t0;
+  const seg=[];let total=0;for(let i=1;i<xy.length;i++){const l=Math.hypot(xy[i].x-xy[i-1].x,xy[i].y-xy[i-1].y);seg.push(l);total+=l;}
+  let along=0;const jit=()=>(Math.random()-.5)*2.4;
+  const push=(x,y)=>{out.push({...P.inv({x:x+jit(),y:y+jit()}),t});};
+  push(xy[0].x,xy[0].y);
+  for(let i=1;i<xy.length;i++){const A=xy[i-1],Bp=xy[i],L=seg[i-1],ux=(Bp.x-A.x)/L,uy=(Bp.y-A.y)/L;let d=0;
+    while(d+speed*step<L){d+=speed*step;t+=step*1000;let x=A.x+ux*d,y=A.y+uy*d;const f=(along+d)/total;
+      if(opt.dev&&f>opt.dev[0]&&f<opt.dev[1]){const k=Math.sin((f-opt.dev[0])/(opt.dev[1]-opt.dev[0])*Math.PI)*opt.dev[2];x+=-uy*k;y+=ux*k;}
+      push(x,y);}
+    along+=L;t+=((L-d)/speed)*1000;push(Bp.x,Bp.y);
+    const pause=opt.pauses&&opt.pauses[i];if(pause){for(let w=0;w<pause;w+=step*1000){t+=step*1000;push(Bp.x,Bp.y);}}}
+  return out;}
+
+function sampleTrip(){
+  const path=wpToLatLon(ORIGIN,SAMPLE_WP);const t0=Date.now()-3*3600*1000;
+  const fx=genFixes(path,{t0,pauses:{3:150000,7:95000}});const B=newBuilder();fx.forEach(p=>feed(B,p));const r=finish(B);
+  return {id:"sample",name:"Sample walk: home to the market",created:t0,sample:true,...r};
+}
+
+// ---------- state ----------
+const S={dir:"back",tab:"record",trips:[],selId:null,zoom:1,rec:null,play:null,back:null,editId:null,confirmId:null,shareId:null};
+S.trips=loadTrips()||[sampleTrip()];
+if(!S.trips.length)S.trips=[sampleTrip()];
+S.selId=S.trips[0].id;
+const sel=()=>S.trips.find(t=>t.id===S.selId)||null;
+function tripStats(t){const d=pathLen(t.points);const dur=t.points.length?t.points[t.points.length-1].t-t.points[0].t:0;return {d,dur,stops:t.stops.length};}
+
+// ---------- wake lock ----------
+let wl=null;
+async function wake(on){try{if(on&&!wl&&navigator.wakeLock){wl=await navigator.wakeLock.request("screen");wl.addEventListener("release",()=>{wl=null;});}else if(!on&&wl){await wl.release();wl=null;}}catch(e){wl=null;}}
+
+// ---------- position sources ----------
+// In the phone app, GPS runs through the native background plugin so recording
+// and guidance keep going with the screen off or the app in the background.
+const NATIVE=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());
+const BG=NATIVE?window.Capacitor.registerPlugin("BackgroundGeolocation"):null;
+function startNativeGPS(onFix,onErr,purpose){
+  let id=null,stopped=false;
+  BG.addWatcher({
+    backgroundTitle:"WayBack is using your location",
+    backgroundMessage:purpose==="back"?"Guiding you back along your route.":"Recording your route.",
+    requestPermissions:true,stale:false,distanceFilter:3
+  },(loc,err)=>{
+    if(err){
+      if(err.code==="NOT_AUTHORIZED"){onErr("WayBack needs location access. Open Settings, allow location for WayBack, then try again.");
+        try{BG.openSettings();}catch(e){}}
+      else onErr("Can't get a GPS fix yet. Step outside or wait a moment.");
+      return;}
+    if(loc)onFix({lat:loc.latitude,lon:loc.longitude,t:loc.time||Date.now(),acc:loc.accuracy});
+  }).then(w=>{id=w;if(stopped)BG.removeWatcher({id});}).catch(()=>onErr("Location could not start on this phone."));
+  return {stop:()=>{stopped=true;if(id)BG.removeWatcher({id}).catch(()=>{});}};
+}
+function startGPS(onFix,onErr,purpose){
+  if(BG)return startNativeGPS(onFix,onErr,purpose);
+  if(!("geolocation" in navigator)){onErr("This browser can't read your location.");return null;}
+  let id=null;
+  try{id=navigator.geolocation.watchPosition(pos=>{const c=pos.coords;onFix({lat:c.latitude,lon:c.longitude,t:pos.timestamp||Date.now(),acc:c.accuracy});},
+    e=>{onErr(e.code===1?"Location is blocked here. Open WayBack in your phone browser and allow location, or use the demo.":"Can't get a GPS fix yet. Step outside or wait a moment.");},
+    {enableHighAccuracy:true,maximumAge:2000,timeout:20000});}catch(e){onErr("Location is blocked here. Use the demo to see how it works.");return null;}
+  return {stop:()=>{try{navigator.geolocation.clearWatch(id);}catch(e){}}};
+}
+function startSim(fixes,onFix,onDone){let i=0;const tick=setInterval(()=>{if(i>=fixes.length){clearInterval(tick);onDone&&onDone();return;}onFix({...fixes[i],acc:4});i++;},110);return {stop:()=>clearInterval(tick)};}
+
+// ---------- recording ----------
+function recStart(demo){
+  if(S.rec)return;
+  const B=newBuilder();S.rec={B,demo,cur:null,acc:null,startReal:Date.now(),src:null};
+  const onFix=p=>{if(!S.rec)return;if(p.acc&&p.acc>50){S.rec.acc=p.acc;renderRec();return;}S.rec.cur=p;S.rec.acc=p.acc;feed(B,p);renderRec();draw();};
+  if(demo){const shift=S.trips.length*0.0011;const o={lat:ORIGIN.lat+shift,lon:ORIGIN.lon-shift};const path=wpToLatLon(o,[[0,0],[60,80],[70,210],[190,260],[230,390],[330,430]]);
+    S.rec.src=startSim(genFixes(path,{t0:Date.now(),pauses:{3:120000}}),onFix,()=>{$("recnote").textContent="Demo walk finished. Tap “Stop and save” to keep it.";});}
+  else S.rec.src=startGPS(onFix,msg=>{$("recnote").textContent=msg;$("recnote").className="note warn";if(!S.rec||!S.rec.B.points.length){recCancel();}});
+  wake(true);S.zoom=1;setTab("record");renderRec();
+}
+function recCancel(){if(!S.rec)return;S.rec.src&&S.rec.src.stop();S.rec=null;wake(false);renderRec();draw();}
+function recStop(){
+  if(!S.rec)return;const {B,demo}=S.rec;S.rec.src&&S.rec.src.stop();const r=finish(B);S.rec=null;wake(false);
+  if(r.points.length<2){$("recnote").textContent="Not enough of the route was recorded to save. Try walking a little further.";renderRec();draw();return;}
+  const t={id:"t"+Date.now(),name:(demo?"Demo walk, ":"Trip, ")+fmtDate(r.points[0].t),created:r.points[0].t,...r};
+  S.trips.unshift(t);S.selId=t.id;saveTrips();$("recnote").className="note";$("recnote").textContent="Saved. Find it in Trips.";setTab("trips");
+}
+function renderRec(){
+  const on=!!S.rec;$("recstart").hidden=on;$("recdemo").hidden=on;$("recstop").hidden=!on;$("recdot").className="dot"+(on?" live":"");
+  if(!on){$("recstatus").textContent="Ready to record";return;}
+  const B=S.rec.B,pts=B.points;$("recstatus").textContent=S.rec.demo?"Recording · demo walk":"Recording · GPS";
+  const el=pts.length?(S.rec.cur.t-pts[0].t):0;$("r-time").textContent=fmtDur(el);$("r-dist").textContent=fmtDist(pathLen(pts));
+  $("r-stops").textContent=liveStops(B);$("r-fix").textContent=S.rec.acc?"±"+Math.round(S.rec.acc)+" m":"±— m";
+  if(!S.rec.demo&&!pts.length){$("recnote").className="note";$("recnote").textContent="Waiting for GPS…";}
+}
+
+// ---------- replay ----------
+function interp(pts,t){if(t<=pts[0].t)return {...pts[0],i:0};const n=pts.length;if(t>=pts[n-1].t)return {...pts[n-1],i:n-1};
+  let lo=0,hi=n-1;while(hi-lo>1){const m=(lo+hi)>>1;if(pts[m].t<=t)lo=m;else hi=m;}const a=pts[lo],b=pts[hi],f=(t-a.t)/((b.t-a.t)||1);
+  return {lat:a.lat+(b.lat-a.lat)*f,lon:a.lon+(b.lon-a.lon)*f,t,i:lo};}
+function replayInit(){const t=sel();if(!t){S.play=null;return;}
+  if(!S.play||S.play.id!==t.id){const cum=[0];for(let i=1;i<t.points.length;i++)cum.push(cum[i-1]+dist(t.points[i-1],t.points[i]));
+    S.play={id:t.id,t:t.points[0].t,playing:false,speed:S.play?S.play.speed:30,cum,raf:0,lastReal:0};}}
+function playPos(){const t=sel(),p=S.play;return interp(t.points,p.t);}
+function coveredDist(pos){const t=sel(),p=S.play;return p.cum[pos.i]+dist(t.points[pos.i],pos);}
+function loop(ts){const p=S.play,t=sel();if(!p||!p.playing||!t)return;const dt=p.lastReal?ts-p.lastReal:0;p.lastReal=ts;
+  p.t+=dt*p.speed;const end=t.points[t.points.length-1].t;
+  // skip long stationary gaps quickly at low speeds is unnecessary; stops show as pauses
+  if(p.t>=end){p.t=end;p.playing=false;}
+  renderReplay();draw();if(p.playing)p.raf=requestAnimationFrame(loop);}
+function togglePlay(){const p=S.play,t=sel();if(!p)return;const end=t.points[t.points.length-1].t;if(!p.playing&&p.t>=end)p.t=t.points[0].t;
+  p.playing=!p.playing;p.lastReal=0;if(p.playing)p.raf=requestAnimationFrame(loop);else cancelAnimationFrame(p.raf);renderReplay();}
+function pausePlay(){if(S.play&&S.play.playing){S.play.playing=false;cancelAnimationFrame(S.play.raf);}}
+function renderReplay(){
+  const t=sel();$("rp-empty").hidden=!!t;$("rp-body").hidden=!t;if(!t)return;replayInit();const p=S.play,pos=playPos();
+  const t0=t.points[0].t,t1=t.points[t.points.length-1].t,total=p.cum[p.cum.length-1];
+  $("rp-name").textContent=t.name;$("rp-clock").textContent=fmtClock(p.t);$("rp-el").textContent=fmtDur(p.t-t0);
+  const cov=coveredDist(pos);$("rp-dist").textContent=fmtDist(cov);$("rp-total").textContent=fmtDist(total);$("rp-pct").textContent=Math.round(total?cov/total*100:0)+"%";
+  $("rp-scrub").value=Math.round((p.t-t0)/((t1-t0)||1)*1000);$("rp-play").textContent=p.playing?"Pause":(p.t>=t1?"Play again":"Play");
+  [...$("rp-speed").children].forEach(b=>b.setAttribute("aria-pressed",String(+b.dataset.s===p.speed)));
+  const box=$("rp-stops");if(box.dataset.for!==t.id){box.dataset.for=t.id;box.innerHTML="";
+    if(!t.stops.length){const e=document.createElement("span");e.className="note";e.textContent="No stops of a minute or more.";box.appendChild(e);}
+    t.stops.forEach((s,k)=>{const b=document.createElement("button");b.textContent="Stop "+(k+1)+" · "+fmtMin(s.to-s.from)+" at "+fmtClock(s.from);b.onclick=()=>{pausePlay();S.play.t=s.from;renderReplay();draw();};box.appendChild(b);});}
+}
+
+// ---------- guided return ----------
+function backPrepare(){const t=sel();if(!t)return null;const rev=S.dir==="there"?t.points.slice():t.points.slice().reverse();const path=simplify(rev,6);
+  const P=projector(path[0]),xy=path.map(P.f),cum=[0];for(let i=1;i<xy.length;i++)cum.push(cum[i-1]+Math.hypot(xy[i].x-xy[i-1].x,xy[i].y-xy[i-1].y));
+  return {id:t.id,dir:S.dir,path,P,xy,cum,total:cum[cum.length-1],idx:0};}
+function guide(G,pos){
+  const q=G.P.f(pos);let best={d:Infinity,i:0,f:0};const from=Math.max(0,G.idx-3);
+  for(let i=from;i<G.xy.length-1;i++){const A=G.xy[i],B=G.xy[i+1],dx=B.x-A.x,dy=B.y-A.y,L2=dx*dx+dy*dy||1e-9;let f=((q.x-A.x)*dx+(q.y-A.y)*dy)/L2;f=Math.max(0,Math.min(1,f));
+    const d=Math.hypot(q.x-(A.x+dx*f),q.y-(A.y+dy*f));if(d<best.d-0.01)best={d,i,f};}
+  G.idx=best.i;const A=G.xy[best.i],B=G.xy[best.i+1]||A;const along=G.cum[best.i]+Math.hypot(B.x-A.x,B.y-A.y)*best.f;const remain=Math.max(0,G.total-along);
+  const near=G.P.inv({x:A.x+(B.x-A.x)*best.f,y:A.y+(B.y-A.y)*best.f});
+  let turn=null;for(let j=best.i+1;j<G.path.length-1;j++){const b1=bearing(G.path[j-1],G.path[j]),b2=bearing(G.path[j],G.path[j+1]);let dl=((b2-b1+540)%360)-180;
+    if(Math.abs(dl)>=35){turn={d:G.cum[j]-along,dir:dl>0?"right":"left",mag:Math.abs(dl)};break;}}
+  return {off:best.d,remain,along,near,turn};}
+function turnText(tn){const verb=tn.mag>=120?"Make a sharp turn":tn.mag>=60?"Turn":"Bear";return verb+" "+tn.dir;}
+function backStart(demo){
+  const G=backPrepare();if(!G)return;if(S.back&&S.back.src)S.back.src.stop();
+  S.back={G,demo,trail:[],cur:null,startT:null,src:null,arrived:false,lastT:null};
+  const onFix=p=>{const b=S.back;if(!b||b.arrived)return;if(p.acc&&p.acc>50)return;b.cur=p;if(b.startT===null)b.startT=p.t;b.lastT=p.t;b.trail.push(p);b.g=guide(b.G,p);if(b.g.remain<15&&b.g.off<25){b.arrived=true;b.src&&b.src.stop();wake(false);}renderBack();draw();};
+  if(demo){S.back.src=startSim(genFixes(G.path,{t0:Date.now(),speed:1.4,dev:[0.42,0.58,48]}),onFix);}
+  else S.back.src=startGPS(onFix,msg=>{$("bk-note").textContent=msg;$("bk-note").className="note warn";if(S.back&&!S.back.trail.length)backEnd();},"back");
+  wake(true);S.zoom=1;setTab("back");renderBack();}
+function backEnd(){if(S.back&&S.back.src)S.back.src.stop();S.back=null;wake(false);renderBack();draw();}
+function renderBack(){
+  const t=sel();$("bk-empty").hidden=!!t;$("bk-body").hidden=!t;if(!t)return;const there=S.dir==="there";$("bk-name").textContent=(there?"Again to the end of: ":"Back along: ")+t.name;
+  [...$("bk-dir").children].forEach(x=>x.setAttribute("aria-pressed",String(x.dataset.d===S.dir)));$("bk-leftlbl").textContent=there?"To the destination":"To the start";
+  const b=S.back&&S.back.G.id===t.id?S.back:null;const active=!!b&&!b.arrived;
+  $("bk-start").hidden=active;$("bk-demo").hidden=active;$("bk-end").hidden=!b;$("bk-end").textContent=b&&b.arrived?"Done":"End guidance";
+  const guideEl=$("bk-guide");guideEl.classList.remove("off");
+  if(!b){$("bk-instr").textContent="Ready when you are";$("bk-sub").textContent=there?"Start where this trip started. WayBack leads you along the same path to where it ended.":"Start where this trip ended. WayBack leads you along the same path, in reverse.";
+    $("bk-bar").style.width="0";["bk-left","bk-off","bk-src"].forEach(i=>$(i).textContent="—");$("bk-time").textContent="0:00:00";return;}
+  $("bk-src").textContent=b.demo?"Demo":"GPS";
+  if(!b.g){$("bk-instr").textContent="Finding you…";$("bk-sub").textContent="Waiting for your first position.";return;}
+  const g=b.g;$("bk-left").textContent=fmtDist(g.remain);$("bk-off").textContent=fmtDist(g.off);$("bk-time").textContent=fmtDur(b.lastT-b.startT);
+  $("bk-bar").style.width=Math.min(100,g.along/(b.G.total||1)*100)+"%";
+  if(b.arrived){$("bk-instr").textContent=there?"You've arrived":"You're back at the start";$("bk-sub").textContent="Walked "+fmtDist(pathLen(b.trail))+" in "+fmtDur(b.lastT-b.startT)+".";return;}
+  if(g.off>25){guideEl.classList.add("off");$("bk-instr").textContent="You've left the path";$("bk-sub").textContent="The path is "+fmtDist(g.off)+" to the "+compass(bearing(b.cur,g.near))+". Head that way to rejoin it.";return;}
+  if(g.turn&&g.turn.d<=200){const d=Math.max(0,g.turn.d);$("bk-instr").textContent=d<12?turnText(g.turn)+" now":"In "+fmtDist(Math.round(d/5)*5)+", "+turnText(g.turn).toLowerCase();}
+  else $("bk-instr").textContent="Keep straight"+(g.turn?" for "+fmtDist(Math.round(g.turn.d/10)*10):"");
+  $("bk-sub").textContent=fmtDist(g.remain)+(there?" to the destination":" to where you started")+". Heading "+compass(bearing(b.cur,b.G.path[Math.min(b.G.idx+1,b.G.path.length-1)]))+".";}
+
+// ---------- sharing ----------
+function encodeTrip(t){const o={v:1,n:t.name,c:t.created,p:t.points.map(p=>[Math.round(p.lat*1e5),Math.round(p.lon*1e5),Math.round((p.t-t.created)/1000)]),s:t.stops.map(s=>[Math.round(s.lat*1e5),Math.round(s.lon*1e5),Math.round((s.from-t.created)/1000),Math.round((s.to-t.created)/1000)])};
+  return "WB1."+btoa(unescape(encodeURIComponent(JSON.stringify(o))));}
+function decodeTrip(code){code=code.trim().replace(/\s+/g,"");if(!code.startsWith("WB1."))throw new Error("That isn't a WayBack trip code. Codes start with WB1.");
+  let o;try{o=JSON.parse(decodeURIComponent(escape(atob(code.slice(4)))));}catch(e){throw new Error("The code looks incomplete. Copy the whole code and try again.");}
+  if(!o.p||o.p.length<2)throw new Error("This trip has no route in it.");
+  return {id:"t"+Date.now(),name:o.n||"Shared trip",created:o.c,shared:true,points:o.p.map(a=>({lat:a[0]/1e5,lon:a[1]/1e5,t:o.c+a[2]*1000})),stops:(o.s||[]).map(a=>({lat:a[0]/1e5,lon:a[1]/1e5,from:o.c+a[2]*1000,to:o.c+a[3]*1000}))};}
+function copyText(text,el,btn){const done=()=>{btn.textContent="Copied";setTimeout(()=>btn.textContent="Copy code",1600);};
+  const sel=()=>{const r=document.createRange();r.selectNodeContents(el);const s=getSelection();s.removeAllRanges();s.addRange(r);btn.textContent="Selected, press copy";};
+  try{navigator.clipboard.writeText(text).then(done,sel);}catch(e){sel();}}
+
+// ---------- trips list ----------
+function renderTrips(){
+  const box=$("triplist");box.innerHTML="";
+  S.trips.forEach(t=>{const st=tripStats(t);const c=document.createElement("div");c.className="trip"+(t.id===S.selId?" sel":"");
+    if(S.editId===t.id){const inp=document.createElement("input");inp.id="rename-"+t.id;inp.value=t.name;inp.setAttribute("aria-label","Trip name");c.appendChild(inp);
+      const r=document.createElement("div");r.className="row";r.append(mk("Save name","btn sm primary",()=>{t.name=inp.value.trim()||t.name;S.editId=null;saveTrips();renderAll();}),mk("Cancel","btn sm",()=>{S.editId=null;renderTrips();}));c.appendChild(r);
+      setTimeout(()=>inp.focus(),0);}
+    else{const h=document.createElement("h3");h.textContent=t.name;if(t.sample){const g=document.createElement("span");g.className="tag";g.textContent="Sample";h.appendChild(g);}if(t.shared){const g=document.createElement("span");g.className="tag";g.textContent="Shared";h.appendChild(g);}c.appendChild(h);}
+    const m=document.createElement("div");m.className="meta";m.textContent=fmtDate(t.created)+" · "+fmtDist(st.d)+" · "+fmtDur(st.dur)+" · "+st.stops+(st.stops===1?" stop":" stops");c.appendChild(m);
+    const r=document.createElement("div");r.className="row";
+    r.append(mk("Replay","btn sm primary",()=>{pick(t.id);setTab("replay");}),mk("Take me back","btn sm",()=>{pick(t.id);setDir("back");setTab("back");}),mk("Go there again","btn sm",()=>{pick(t.id);setDir("there");setTab("back");}),
+      mk(S.shareId===t.id?"Hide code":"Share","btn sm",()=>{S.shareId=S.shareId===t.id?null:t.id;pick(t.id);}),mk("Rename","btn sm",()=>{S.editId=t.id;renderTrips();}),
+      mk("Delete","btn sm danger",()=>{S.confirmId=t.id;renderTrips();}));
+    c.appendChild(r);
+    if(S.confirmId===t.id){const q=document.createElement("div");q.className="row";q.style.alignItems="center";const s=document.createElement("span");s.className="note warn";s.textContent="Delete this trip for good?";
+      q.append(s,mk("Delete","btn sm danger",()=>{S.trips=S.trips.filter(x=>x.id!==t.id);if(S.selId===t.id)S.selId=S.trips[0]?S.trips[0].id:null;S.confirmId=null;saveTrips();if(S.back&&S.back.G.id===t.id)backEnd();renderAll();}),mk("Keep","btn sm",()=>{S.confirmId=null;renderTrips();}));c.appendChild(q);}
+    if(S.shareId===t.id){const code=encodeTrip(t);const n=document.createElement("p");n.className="note";n.textContent="Send this code to family or friends. They paste it into WayBack to replay your route or follow it themselves.";
+      const pre=document.createElement("div");pre.className="code";pre.textContent=code;const b=mk("Copy code","btn sm",()=>copyText(code,pre,b));c.append(n,pre,b);}
+    c.addEventListener("click",e=>{if(e.target.closest("button,input"))return;pick(t.id);});
+    box.appendChild(c);});
+  if(!S.trips.length){const e=document.createElement("p");e.className="empty";e.textContent="No trips yet. Record your first one in Record.";box.appendChild(e);}
+}
+function mk(label,cls,fn){const b=document.createElement("button");b.className=cls;b.textContent=label;b.type="button";b.onclick=fn;return b;}
+function pick(id){if(S.selId!==id){pausePlay();S.play=null;if(S.back&&S.back.G.id!==id)backEnd();}S.selId=id;S.zoom=1;renderAll();}
+
+// ---------- tabs ----------
+function setDir(d){if(S.dir===d)return;S.dir=d;if(S.back)backEnd();renderBack();draw();}
+function setTab(tab){S.tab=tab;document.querySelectorAll(".tabs button").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.tab===tab)));
+  ["record","trips","replay","back"].forEach(v=>$("v-"+v).hidden=v!==tab);if(tab!=="replay")pausePlay();renderAll();}
+function renderAll(){const t=sel();$("chip").textContent=t?t.name:"No trip selected";renderRec();renderTrips();renderReplay();renderBack();draw();}
+
+// ---------- map drawing ----------
+const cv=$("map"),ctx=cv.getContext("2d");
+function css(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
+function niceStep(m){const p=Math.pow(10,Math.floor(Math.log10(m)));const r=m/p;return (r<1.5?1:r<3.5?2:r<7.5?5:10)*p;}
+function draw(){
+  const dpr=window.devicePixelRatio||1,w=cv.clientWidth,h=cv.clientHeight;if(!w||!h)return;
+  if(cv.width!==Math.round(w*dpr)||cv.height!==Math.round(h*dpr)){cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);}
+  ctx.setTransform(dpr,0,0,dpr,0,0);const C={bg:css("--map-bg"),grid:css("--map-grid"),path:css("--path"),dim:css("--path-dim"),me:css("--me"),trail:css("--trail"),warn:css("--warn"),fg:css("--fg"),muted:css("--muted"),surface:css("--surface")};
+  ctx.fillStyle=C.bg;ctx.fillRect(0,0,w,h);
+  // what to show
+  const t=sel();let main=null,label="Map",cur=null,extra=null,stops=[],played=null;
+  if(S.tab==="record"&&S.rec){main=S.rec.B.points;cur=S.rec.cur;label="Recording";stops=S.rec.B.stops.concat(S.rec.B.open?[S.rec.B.open]:[]);}
+  else if(S.tab==="back"&&S.back&&t&&S.back.G.id===t.id){main=S.back.G.path;extra=S.back.trail;cur=S.back.cur;label="Going back";stops=t.stops;}
+  else if(t){main=t.points;stops=t.stops;label=t.name;if(S.tab==="replay"&&S.play&&S.play.id===t.id){cur=playPos();played=cur;}}
+  if(label==="Going back"&&S.back&&S.back.G.dir==="there")label="Going there again";$("maplabel").textContent=label;
+  const all=(main||[]).concat(extra||[]).concat(cur?[cur]:[]);
+  if(!all.length){ctx.fillStyle=C.muted;ctx.font="500 14px "+css("--f-body");ctx.textAlign="center";ctx.fillText(S.rec?"Waiting for your first position…":"Your route will appear here",w/2,h/2);return;}
+  let mnLa=Infinity,mxLa=-Infinity,mnLo=Infinity,mxLo=-Infinity;all.forEach(p=>{mnLa=Math.min(mnLa,p.lat);mxLa=Math.max(mxLa,p.lat);mnLo=Math.min(mnLo,p.lon);mxLo=Math.max(mxLo,p.lon);});
+  let center={lat:(mnLa+mxLa)/2,lon:(mnLo+mxLo)/2};const P=projector(center);const a=P.f({lat:mnLa,lon:mnLo}),b=P.f({lat:mxLa,lon:mxLo});
+  const span=Math.max(b.x-a.x,b.y-a.y,120);let sc=Math.min(w/Math.max(b.x-a.x,120),h/Math.max(b.y-a.y,120))*0.8*S.zoom;
+  let cx=0,cy=0;if(S.zoom>1&&cur){const c=P.f(cur);cx=c.x;cy=c.y;}
+  const X=p=>{const q=P.f(p);return [w/2+(q.x-cx)*sc,h/2-(q.y-cy)*sc];};
+  // grid
+  const stepM=niceStep(80/sc);ctx.strokeStyle=C.grid;ctx.lineWidth=1;ctx.beginPath();
+  const x0=cx-w/2/sc,x1=cx+w/2/sc,y0=cy-h/2/sc,y1=cy+h/2/sc;
+  for(let gx=Math.ceil(x0/stepM)*stepM;gx<=x1;gx+=stepM){const sx=w/2+(gx-cx)*sc;ctx.moveTo(sx,0);ctx.lineTo(sx,h);}
+  for(let gy=Math.ceil(y0/stepM)*stepM;gy<=y1;gy+=stepM){const sy=h/2-(gy-cy)*sc;ctx.moveTo(0,sy);ctx.lineTo(w,sy);}ctx.stroke();
+  const line=(pts,col,wd,dash)=>{if(!pts||pts.length<2)return;ctx.strokeStyle=col;ctx.lineWidth=wd;ctx.lineJoin=ctx.lineCap="round";ctx.setLineDash(dash||[]);ctx.beginPath();pts.forEach((p,i)=>{const [x,y]=X(p);i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.stroke();ctx.setLineDash([]);};
+  if(played){line(main,C.dim,6);const sub=main.slice(0,played.i+1).concat([played]);line(sub,C.path,6);}
+  else line(main,S.tab==="back"&&S.back?C.path:C.path,6);
+  if(extra)line(extra,C.trail,3.5);
+  // stops
+  stops.forEach(s=>{const [x,y]=X(s);ctx.beginPath();ctx.arc(x,y,8,0,7);ctx.fillStyle=C.surface;ctx.fill();ctx.lineWidth=3;ctx.strokeStyle=C.trail;ctx.stroke();});
+  // pins: A = where the trip began, B = where it ended
+  const pin=(p,txt,fill)=>{const [x,y]=X(p);ctx.beginPath();ctx.arc(x,y,11,0,7);ctx.fillStyle=fill;ctx.fill();ctx.lineWidth=2.5;ctx.strokeStyle=C.surface;ctx.stroke();ctx.fillStyle=C.surface;ctx.font="700 11px "+css("--f-body");ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(txt,x,y+0.5);};
+  if(main&&main.length){const isBack=S.tab==="back"&&S.back&&S.back.G.dir!=="there";const first=main[0],last=main[main.length-1];
+    if(isBack){pin(last,"A",C.path);pin(first,"B",C.fg);}else{pin(first,"A",C.path);if(main.length>1&&!S.rec)pin(last,"B",C.fg);}}
+  // off-route connector
+  if(S.tab==="back"&&S.back&&S.back.g&&S.back.g.off>25&&cur){const [x1_,y1_]=X(cur),[x2,y2]=X(S.back.g.near);ctx.strokeStyle=C.warn;ctx.lineWidth=2;ctx.setLineDash([5,5]);ctx.beginPath();ctx.moveTo(x1_,y1_);ctx.lineTo(x2,y2);ctx.stroke();ctx.setLineDash([]);}
+  if(cur){const [x,y]=X(cur);ctx.beginPath();ctx.arc(x,y,16,0,7);ctx.fillStyle=C.me+"33";ctx.fill();ctx.beginPath();ctx.arc(x,y,7.5,0,7);ctx.fillStyle=C.me;ctx.fill();ctx.lineWidth=3;ctx.strokeStyle=C.surface;ctx.stroke();}
+  // scale bar + north
+  const barM=niceStep(90/sc),barPx=barM*sc;ctx.fillStyle=C.fg;ctx.fillRect(14,h-20,barPx,3);ctx.fillRect(14,h-26,2,9);ctx.fillRect(14+barPx-2,h-26,2,9);
+  ctx.font="500 11px "+css("--f-mono");ctx.textAlign="left";ctx.textBaseline="bottom";ctx.fillText(fmtDist(barM),14,h-28);
+  ctx.textAlign="center";ctx.textBaseline="middle";ctx.font="700 12px "+css("--f-body");ctx.fillStyle=C.muted;ctx.fillText("N",w-62,22);ctx.beginPath();ctx.moveTo(w-62,30);ctx.lineTo(w-67,42);ctx.lineTo(w-57,42);ctx.closePath();ctx.fill();
+}
+
+// ---------- events ----------
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
+$("recstart").onclick=()=>{$("recnote").className="note";recStart(false);};
+$("recdemo").onclick=()=>{$("recnote").className="note";$("recnote").textContent="Demo walk running at high speed. It includes a two-minute stop.";recStart(true);};
+$("recstop").onclick=recStop;
+$("rp-play").onclick=togglePlay;
+$("rp-speed").onclick=e=>{const b=e.target.closest("button");if(!b||!S.play)return;S.play.speed=+b.dataset.s;renderReplay();};
+$("rp-scrub").oninput=e=>{const t=sel();if(!t||!S.play)return;pausePlay();const t0=t.points[0].t,t1=t.points[t.points.length-1].t;S.play.t=t0+(t1-t0)*(+e.target.value/1000);renderReplay();draw();};
+$("bk-start").onclick=()=>{$("bk-note").className="note";$("bk-note").textContent="Works without data or signal. The route is already on your phone.";backStart(false);};
+$("bk-demo").onclick=()=>{$("bk-note").className="note";$("bk-note").textContent="Demo walk back. Partway along it wanders off the path so you can see the warning.";backStart(true);};
+$("bk-end").onclick=backEnd;
+$("bk-dir").onclick=e=>{const b=e.target.closest("button");if(b)setDir(b.dataset.d);};
+$("importbtn").onclick=()=>{const n=$("importnote");try{const t=decodeTrip($("importcode").value);S.trips.unshift(t);S.selId=t.id;saveTrips();$("importcode").value="";n.className="note";n.textContent="Added “"+t.name+"”.";renderAll();}catch(e){n.className="note warn";n.textContent=e.message;}};
+$("zin").onclick=()=>{S.zoom=Math.min(8,S.zoom*1.6);draw();};
+$("zout").onclick=()=>{S.zoom=Math.max(0.4,S.zoom/1.6);draw();};
+$("zfit").onclick=()=>{S.zoom=1;draw();};
+new ResizeObserver(()=>draw()).observe(cv);
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change",draw);
+new MutationObserver(draw).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&(S.rec||S.back))wake(true);});
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(draw);
+
+// Open on the sample trip in replay so the first view shows what WayBack does
+setTab(S.trips.some(t=>!t.sample)?"trips":"replay");
+})();
+</script>
+
+</body>
+</html>
