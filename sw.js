@@ -1,6 +1,6 @@
 // WayBack offline helper. Saves the app on the phone so it opens with data off.
 // Change VERSION whenever index.html changes so phones pick up the update.
-const VERSION = "wayback-2026-10-29a";
+const VERSION = "wayback-2026-10-29b";
 const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 self.addEventListener("install", e => {

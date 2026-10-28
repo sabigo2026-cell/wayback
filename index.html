@@ -477,7 +477,7 @@ function renderReplay(){
 }
 
 // ---------- guided return ----------
-function backPrepare(){const t=sel();if(!t)return null;const rev=S.dir==="there"?t.points.slice():t.points.slice().reverse();const path=simplify(rev,6);
+function backPrepare(){const t=sel();if(!t)return null;if(pathLen(t.points)<5)S.dir="there";const rev=S.dir==="there"?t.points.slice():t.points.slice().reverse();const path=simplify(rev,6);
   const P=projector(path[0]),xy=path.map(P.f),cum=[0];for(let i=1;i<xy.length;i++)cum.push(cum[i-1]+Math.hypot(xy[i].x-xy[i-1].x,xy[i].y-xy[i-1].y));
   return {id:t.id,dir:S.dir,path,P,xy,cum,total:cum[cum.length-1],idx:0};}
 function guide(G,pos){
@@ -511,6 +511,7 @@ function renderBack(){
   const g=b.g;$("bk-left").textContent=fmtDist(g.remain);$("bk-off").textContent=fmtDist(g.off);$("bk-time").textContent=fmtDur(b.lastT-b.startT);
   $("bk-bar").style.width=Math.min(100,g.along/(b.G.total||1)*100)+"%";
   $("bk-arrived").hidden=!b.arrived;if(b.arrived){$("bk-instr").textContent=there?"You've arrived":"You're back at the start";$("bk-sub").textContent="Walked "+fmtDist(pathLen(b.trail))+" in "+fmtDur(b.lastT-b.startT)+".";return;}
+  if(b.G.total<5){$("bk-instr").textContent=fmtDist(g.off)+" to go";$("bk-sub").textContent="Head "+compass(bearing(b.cur,g.near))+" to reach the shared location.";$("bk-left").textContent=fmtDist(g.off);$("bk-off").textContent="—";$("bk-bar").style.width="0";return;}
   if(g.off>25){guideEl.classList.add("off");$("bk-instr").textContent="You've left the path";$("bk-sub").textContent="The path is "+fmtDist(g.off)+" to the "+compass(bearing(b.cur,g.near))+". Head that way to rejoin it.";return;}
   if(g.turn&&g.turn.d<=200){const d=Math.max(0,g.turn.d);$("bk-instr").textContent=d<12?turnText(g.turn)+" now":"In "+fmtDist(Math.round(d/5)*5)+", "+turnText(g.turn).toLowerCase();}
   else $("bk-instr").textContent="Keep straight"+(g.turn?" for "+fmtDist(Math.round(g.turn.d/10)*10):"");
@@ -536,6 +537,9 @@ function voiceUpdate(b){
   if(!VOICE.on||!b.g)return;const g=b.g,there=b.G.dir==="there",fast=b.demo;
   const V=b.v||(b.v={said:{},offAt:0,wasOff:false,started:false});
   if(b.arrived){if(!V.said.arr){V.said.arr=1;say(there?"You have arrived.":"You are back at the start.",true);}return;}
+  if(b.G.total<5){const step=g.off>500?200:50;const k=Math.ceil(g.off/step);
+    if(!V.started){V.started=true;V.pk=k;say("Taking you to the shared location. "+spokenDist(g.off)+". Head "+compass(bearing(b.cur,g.near))+".",fast);}
+    else if(k<V.pk){V.pk=k;say(spokenDist(g.off)+" to go. Head "+compass(bearing(b.cur,g.near))+".",fast);}return;}
   if(g.off>25||(V.wasOff&&g.off>15)){if(!V.wasOff||b.lastT-V.offAt>30000){V.wasOff=true;V.offAt=b.lastT;say("You have left the path. Walk "+compass(bearing(b.cur,g.near))+" to get back on it.",true);}return;}
   if(V.wasOff){V.wasOff=false;say("You are back on the path.",true);}
   if(!V.started){V.started=true;say((there?"Starting. ":"Taking you back. ")+spokenDist(g.remain)+(there?" to the destination.":" to the start."),fast);}
@@ -677,32 +681,46 @@ function smsHref(text){return smsLink(CONTACTS.map(c=>c.phone),text);}
 // ---------- current position (for SOS) ----------
 function lastKnown(){
   if(S.rec&&S.rec.cur)return S.rec.cur;if(S.back&&S.back.cur)return S.back.cur;return null;}
-function oneFix(cb){ // quick single GPS reading, max ~12 s
-  let done=false;const finishFix=p=>{if(done)return;done=true;try{src&&src.stop();}catch(e){}clearTimeout(tm);cb(p);};
-  const tm=setTimeout(()=>finishFix(null),12000);
-  const src=startGPS(p=>{if(p.acc&&p.acc>100)return;finishFix(p);},()=>finishFix(null),"sos");}
-
-// ---------- SOS ----------
-function sosMessage(p){
+function oneFix(cb){ // best GPS reading within ~20 s; stops early once it is good (±50 m)
+  let done=false,best=null,src=null,cbProgress=null;const finishFix=(p,err)=>{if(done)return;done=true;try{src&&src.stop();}catch(e){}clearTimeout(tm);cb(p,err);};
+  const tm=setTimeout(()=>finishFix(best,best?null:"timeout"),20000);
+  src=startGPS(p=>{if(!best||(p.acc||999)<(best.acc||999))best=p;if((p.acc||999)<=50)finishFix(p);if(cbProgress)cbProgress(best);},
+    msg=>finishFix(best,/blocked|can't read/i.test(msg)?"denied":"nofix"),"sos");
+  return {progress:f=>{cbProgress=f;}};}
+function lastTripPoint(){ // end of the most recent real trip in the last 12 hours
+  const t=S.trips.find(x=>!x.sample&&!x.shared&&x.points&&x.points.length);if(!t)return null;const e=t.points[t.points.length-1];
+  return Date.now()-e.t<12*3600*1000?{...e,fromTrip:true}:null;}
+function findMeLink(p){const a={lat:p.lat,lon:p.lon,t:p.t||Date.now()};return SITE+"#t="+encodeTrip({name:"SOS location "+fmtClock(a.t),created:a.t,points:[a,{...a,t:a.t+1000}],stops:[]});}
+function sosMessage(p,state){
   let m="SOS from WayBack: I NEED HELP.";
-  if(p){const at=p.lat.toFixed(5)+","+p.lon.toFixed(5);m+="\nMy location: https://maps.google.com/?q="+at+" ("+at+")"+(p.acc?" accurate to about "+Math.round(p.acc)+" m":"")+", "+fmtClock(p.t||Date.now())+".";}
-  else m+="\nI couldn't get my GPS location.";
-  if(S.rec&&S.rec.B.points.length>=2){const B=S.rec.B;m+="\nMy route so far: "+SITE+"#t="+encodeTrip({name:"SOS route",created:B.points[0].t,points:B.points,stops:B.stops});}
+  if(p){const at=p.lat.toFixed(5)+","+p.lon.toFixed(5);
+    m+=(p.fromTrip?"\nMy last known location (from my last WayBack trip, "+fmtClock(p.t)+"): ":"\nMy location: ")+"https://maps.google.com/?q="+at+" ("+at+")"+(p.acc&&!p.fromTrip?" accurate to about "+Math.round(p.acc)+" m, "+fmtClock(p.t||Date.now()):"")+".";}
+  else m+=state==="finding"?"\n(Finding my location…)":"\nI couldn't get my GPS location.";
+  if(S.rec&&S.rec.B.points.length>=2){const B=S.rec.B;const pts=B.points.concat(p&&!p.fromTrip?[{lat:p.lat,lon:p.lon,t:p.t||Date.now()}]:[]);
+    m+="\nFollow my route to me with WayBack: "+SITE+"#t="+encodeTrip({name:"SOS route "+fmtClock(Date.now()),created:pts[0].t,points:pts,stops:B.stops});}
+  else if(p)m+="\nFind me with WayBack: "+findMeLink(p);
   return m+"\nPlease call me. If you can't reach me, call 112.";}
-function openSOS(p){
-  const text=sosMessage(p);SH.text=text;
+function openSOS(p,state){
+  const text=sosMessage(p,state);SH.text=text;
   $("share").classList.add("sos");$("sh-title").textContent="Send SOS";
-  $("sh-sub").textContent=CONTACTS.length?"Tap Send by SMS, then press Send in your messages app.":"Add emergency contacts in Help so SOS goes straight to them. For now, pick who to send it to.";
+  let sub=CONTACTS.length?"Tap Send by SMS, then press Send in your messages app.":"Add emergency contacts in Help so SOS goes straight to them. For now, pick who to send it to.";
+  if(state==="finding")sub="Finding your location… You can already send, but waiting a few seconds adds where you are.";
+  else if(state==="denied")sub="Location is blocked. Allow location for WayBack (or this website) in your phone's Settings, then tap SOS again. You can still send this message.";
+  else if(p&&p.fromTrip)sub="GPS didn't answer in time, so this uses where your last trip ended. "+sub;
+  $("sh-sub").textContent=sub;
   $("sh-msg").textContent=text;$("sh-len").textContent=text.length+" characters, about "+Math.ceil(text.length/153)+" SMS";
   $("sh-sms").href=smsHref(text);
   $("sh-wa").href="https://wa.me/?text="+encodeURIComponent(text);
   $("sh-to").textContent=CONTACTS.length?"To: "+contactNames():"";$("sh-call").hidden=false;
-  $("sh-copy").textContent="Copy message";$("share").hidden=false;setTimeout(()=>$("sh-sms").focus(),0);}
+  $("sh-copy").textContent="Copy message";$("share").hidden=false;}
 function triggerSOS(){
   try{navigator.vibrate&&navigator.vibrate([200,100,200]);}catch(e){}
   const p=lastKnown();if(p){openSOS(p);return;}
-  openSOS(null);$("sh-sub").textContent="Getting your location…";
-  oneFix(fix=>{if($("share").hidden||!$("share").classList.contains("sos"))return;openSOS(fix);});}
+  openSOS(null,"finding");setTimeout(()=>$("sh-sms").focus(),0);
+  const stillOpen=()=>!$("share").hidden&&$("share").classList.contains("sos");
+  const f=oneFix((fix,err)=>{if(!stillOpen())return;
+    if(fix){openSOS(fix);return;}const lt=lastTripPoint();openSOS(lt,lt?null:(err==="denied"?"denied":"failed"));});
+  f.progress(best=>{if(stillOpen()&&best)openSOS(best,"finding");});}
 // Tap SOS to open the SOS screen. Nothing is sent until the user presses Send.
 setTimeout(()=>{const el=$("sosbtn");el.addEventListener("click",triggerSOS);},0);
 
@@ -904,7 +922,13 @@ $("share").addEventListener("click",e=>{if(e.target.id==="share")closeShare();})
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("share").hidden)closeShare();});
 $("sh-copy").onclick=()=>{const b=$("sh-copy");try{navigator.clipboard.writeText(SH.text).then(()=>{b.textContent="Copied";},()=>{selectEl($("sh-msg"));b.textContent="Selected, press copy";});}catch(e){selectEl($("sh-msg"));b.textContent="Selected, press copy";}};
 function selectEl(el){const r=document.createRange();r.selectNodeContents(el);const s=getSelection();s.removeAllRanges();s.addRange(r);}
-// Opened from a shared link (…/wayback/#t=WB2…): add the route automatically.
+// Opened from a shared link (…/wayback/#t=WB2…): add the route automatically,
+// also when WayBack is already open and only the link part changes.
+window.addEventListener("hashchange",()=>{const h=decodeURIComponent(location.hash||"");if(!/^#t=/.test(h))return;const n=$("importnote");
+  try{const t=decodeTrip(h.slice(3));const ex=S.trips.find(x=>x.name===t.name&&x.created===t.created);if(ex){S.selId=ex.id;renderAll();}else addShared(t,n);
+    n.className="note";n.textContent="Shared route added. Tap Replay to see it, or Go there again to follow it.";setTab("trips");}
+  catch(e){n.className="note warn";n.textContent=e.message;setTab("trips");}
+  try{history.replaceState(null,"",location.pathname+location.search);}catch(e){}});
 (function(){const h=decodeURIComponent(location.hash||"");if(!/^#t=/.test(h))return;
   try{const t=decodeTrip(h.slice(3));if(!S.trips.some(x=>x.name===t.name&&x.created===t.created)){S.trips.unshift(t);saveTrips();}S.selId=(S.trips.find(x=>x.name===t.name&&x.created===t.created)||t).id;S.openShared=true;}catch(e){S.sharedErr=e.message;}
   try{history.replaceState(null,"",location.pathname+location.search);}catch(e){}})();
