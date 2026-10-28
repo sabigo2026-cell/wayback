@@ -4,6 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1f6b47">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <title>WayBack</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
@@ -90,6 +94,42 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .bar{height:8px;border-radius:99px;background:var(--line);overflow:hidden}
 .bar i{display:block;height:100%;background:var(--accent);width:0}
 .empty{color:var(--muted);font-size:.9rem}
+.hdr-right{display:flex;align-items:center;gap:8px;min-width:0}
+.helpbtn{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 12px;font-size:.8rem;font-weight:600;cursor:pointer;white-space:nowrap}
+.helpbtn[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.ad{border:1px dashed var(--line);border-radius:12px;padding:12px;display:flex;gap:12px;align-items:flex-start;background:var(--bg)}
+.ad img{width:64px;height:64px;object-fit:cover;border-radius:8px;flex:none}
+.ad .adtxt{display:flex;flex-direction:column;gap:4px;min-width:0}
+.ad .adlbl{font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.ad b{font-size:.95rem;overflow-wrap:anywhere}
+.ad p{margin:0;font-size:.86rem;color:var(--muted);overflow-wrap:anywhere}
+.ad a,.help a{color:var(--accent);font-weight:600}a.btn{text-decoration:none;display:inline-block;color:var(--fg)}a.btn.primary{color:var(--accent-ink)}
+.help h2{font-family:var(--f-display);font-size:1.15rem;margin:0}
+.help section{display:flex;flex-direction:column;gap:6px}
+.help .mail{font-family:var(--f-mono);font-size:.9rem;user-select:text;overflow-wrap:anywhere}
+.sheet{position:fixed;inset:0;z-index:50;background:color-mix(in srgb,var(--fg) 45%,transparent);display:flex;align-items:flex-end;justify-content:center;padding:max(12px,env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) max(12px,env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px))}
+@media (min-width:700px){.sheet{align-items:center}}
+.sheet .card{background:var(--surface);color:var(--fg);border-radius:16px;width:100%;max-width:480px;max-height:100%;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:12px;border:1px solid var(--line)}
+.sheet h2{font-family:var(--f-display);font-weight:800;font-size:1.35rem;line-height:1.2;margin:0;text-wrap:balance}
+.brands{display:flex;flex-wrap:wrap;gap:6px}
+.brands button{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:6px 11px;font-size:.82rem;cursor:pointer}
+.brands button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.steps{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
+.steps li{padding-left:2px}
+.steps b{font-weight:600}
+.tip{font-size:.85rem;background:var(--bg);border-radius:10px;padding:10px 12px;color:var(--muted)}
+.sosbtn{position:relative;overflow:hidden;border:0;background:var(--warn);color:#fff;border-radius:999px;padding:4px 12px;font-size:.8rem;font-weight:800;letter-spacing:.06em;cursor:pointer;white-space:nowrap;touch-action:none;user-select:none;-webkit-user-select:none}
+.sosbtn i{position:absolute;inset:0;background:rgba(0,0,0,.28);transform-origin:left;transform:scaleX(0)}
+.sosbtn.hold i{transform:scaleX(1);transition:transform 2s linear}
+.sosbtn span{position:relative}
+.sheet.sos .card{border:2px solid var(--warn)}
+.sheet.sos h2{color:var(--warn)}
+.sheet.sos #sh-sms,.sheet.sos #sh-call{background:var(--warn);border-color:var(--warn);color:#fff}
+@media (max-width:440px){#chip{display:none}}
+.contacts{display:flex;flex-direction:column;gap:8px}
+.contacts .crow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:8px}
+.contacts input{border:1px solid var(--line);border-radius:8px;padding:8px;background:var(--bg);min-width:0;width:100%}
+.banner{border-radius:10px;padding:10px 12px;background:var(--warn-bg);color:var(--warn);font-weight:600;display:flex;flex-direction:column;gap:8px}
 @media (max-width:420px){.stats{grid-template-columns:repeat(2,1fr)}.brand p{display:none}}
 @media (prefers-reduced-motion:reduce){.dot.live{animation:none}}
 </style>
@@ -99,7 +139,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 <div class="app">
   <header>
     <div class="brand"><h1>Way<span>Back</span></h1><p>Record once. Replay it. Find your way back.</p></div>
-    <div class="chip" id="chip">No trip selected</div>
+    <div class="hdr-right"><div class="chip" id="chip">No trip selected</div><button class="helpbtn" id="helpbtn" aria-pressed="false">Help</button><button class="sosbtn" id="sosbtn" type="button" aria-label="SOS. Press and hold for 2 seconds to send for help"><i></i><span>SOS</span></button></div>
   </header>
 
   <div class="mapwrap">
@@ -132,11 +172,14 @@ input[type=range]{width:100%;accent-color:var(--accent)}
         <button class="btn primary" id="recstart">Start recording</button>
         <button class="btn" id="recdemo">Try a demo walk</button>
         <button class="btn danger" id="recstop" hidden>Stop and save</button>
+        <button class="btn" id="recshare" hidden>Share where I am</button>
       </div>
+      <div class="banner" id="recbatt" hidden><span>Battery low. Send your location to family before your phone switches off.</span><div class="row"><button class="btn sm" id="recbattsend" type="button">Send my location now</button></div></div>
       <p class="note" id="recnote">Walk your route with the screen on. WayBack saves a point every few metres and marks the places you stop for a minute or more. Everything stays on your phone.</p>
     </div>
 
     <div class="view" id="v-trips" hidden>
+      <div class="adslot" id="ad-trips"></div>
       <div id="triplist" style="display:flex;flex-direction:column;gap:10px"></div>
       <div style="display:flex;flex-direction:column;gap:8px">
         <span class="eyebrow">Open a shared trip</span>
@@ -163,6 +206,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
           </div>
         </div>
         <div><span class="eyebrow">Where you stopped</span><div class="stops" id="rp-stops"></div></div>
+        <div class="adslot" id="ad-replay"></div>
       </div>
     </div>
 
@@ -184,10 +228,82 @@ input[type=range]{width:100%;accent-color:var(--accent)}
           <button class="btn" id="bk-demo">Demo walk back</button>
           <button class="btn danger" id="bk-end" hidden>End guidance</button>
         </div>
+        <div class="row" style="align-items:center"><button class="btn sm" id="bk-voice" type="button" aria-pressed="true">🔊 Voice directions: On</button></div>
+        <div class="row" id="bk-arrived" hidden><button class="btn sm primary" id="bk-tellfam" type="button">Tell family I arrived</button></div>
         <p class="note" id="bk-note">Works without data or signal. The route is already on your phone.</p>
       </div>
     </div>
+    <div class="view help" id="v-help" hidden>
+      <section>
+        <h2>Contact us</h2>
+        <p class="note">Questions, problems or ideas for WayBack? Email us and we'll reply.</p>
+        <span class="mail" id="mail1">waybacksupport@gmail.com</span>
+        <div class="row"><button class="btn sm" id="copymail" type="button">Copy email</button><a class="btn sm" href="mailto:waybacksupport@gmail.com?subject=WayBack%20help">Email us</a></div>
+      </section>
+      <section>
+        <h2>Advertise on WayBack</h2>
+        <p class="note">Put your shop, church, event or business in front of WayBack users in the countries you choose. Email us with “Advert” in the subject, and tell us your business, the country and how long you want the ad to run.</p>
+        <div class="row"><a class="btn sm" href="mailto:waybacksupport@gmail.com?subject=Advert%20on%20WayBack">Ask about adverts</a></div>
+      </section>
+      <section>
+        <h2>Emergency contacts</h2>
+        <p class="note">The people WayBack texts when you hold SOS or tell family you've arrived. SMS works without data.</p>
+        <div class="contacts" id="contacts"></div>
+        <div class="row"><button class="btn sm primary" id="savecontacts" type="button">Save contacts</button><span class="note" id="contactsnote"></span></div>
+      </section>
+      <section>
+        <h2>Keep recording reliable</h2>
+        <p class="note">WayBack keeps recording with the screen off and without data or network. Some phones (Tecno, Infinix, itel, Xiaomi and others) close apps to save battery, so change one setting once to make sure that never happens.</p>
+        <div class="eyebrow">Choose your phone</div>
+        <div class="brands" id="hb-brands"></div>
+        <ol class="steps" id="hb-steps"></ol>
+        <p class="tip" id="hb-tip"></p>
+        <div class="row"><button class="btn sm primary" id="helpopenset" type="button" hidden>Open WayBack settings</button><button class="btn sm" id="showbattery" type="button" hidden>Show full guide</button></div>
+      </section>
+      <section>
+        <h2>Your privacy</h2>
+        <p class="note">Your trips are saved on this phone only. Deleting the app or losing the phone deletes them.</p>
+        <a href="https://sabigo2026-cell.github.io/wayback-privacy/" target="_blank" rel="noopener">Read the privacy policy</a>
+      </section>
+      <p class="note">WayBack 1.0 · Sabigo Connect Technologies</p>
+    </div>
   </section>
+</div>
+
+<div class="sheet" id="battery" hidden role="dialog" aria-modal="true" aria-labelledby="bt-title">
+  <div class="card">
+    <h2 id="bt-title">Keep WayBack recording with the screen off</h2>
+    <p class="note" id="bt-intro"></p>
+    <div id="bt-native">
+      <div class="eyebrow" style="margin-bottom:6px">Your phone</div>
+      <div class="brands" id="bt-brands"></div>
+    </div>
+    <ol class="steps" id="bt-steps"></ol>
+    <p class="tip" id="bt-tip"></p>
+    <div class="row">
+      <button class="btn primary" id="bt-open" type="button">Open WayBack settings</button>
+      <button class="btn" id="bt-done" type="button">I've done it</button>
+      <button class="btn" id="bt-later" type="button">Later</button>
+    </div>
+  </div>
+</div>
+
+<div class="sheet" id="share" hidden role="dialog" aria-modal="true" aria-labelledby="sh-title">
+  <div class="card">
+    <h2 id="sh-title">Share this route</h2>
+    <p class="note" id="sh-sub"></p>
+    <div class="code" id="sh-msg" style="max-height:150px;white-space:pre-wrap"></div>
+    <span class="note" id="sh-len"></span>
+    <div class="row">
+      <a class="btn primary" id="sh-sms" href="#">Send by SMS</a>
+      <a class="btn" id="sh-wa" href="#" target="_blank" rel="noopener">Send on WhatsApp</a>
+      <button class="btn" id="sh-copy" type="button">Copy message</button>
+      <a class="btn" id="sh-call" href="tel:112" hidden>Call 112</a>
+    </div>
+    <p class="note" id="sh-to"></p>
+    <p class="tip">SMS works without data, using network signal and airtime. WhatsApp needs data. In danger, call 112 first.</p>
+    <div class="row"><button class="btn" id="sh-close" type="button">Close</button></div>
+  </div>
 </div>
 
 <script>
@@ -308,21 +424,22 @@ function startSim(fixes,onFix,onDone){let i=0;const tick=setInterval(()=>{if(i>=
 function recStart(demo){
   if(S.rec)return;
   const B=newBuilder();S.rec={B,demo,cur:null,acc:null,startReal:Date.now(),src:null};
-  const onFix=p=>{if(!S.rec)return;if(p.acc&&p.acc>50){S.rec.acc=p.acc;renderRec();return;}S.rec.cur=p;S.rec.acc=p.acc;feed(B,p);renderRec();draw();};
+  const onFix=p=>{if(!S.rec)return;if(p.acc&&p.acc>50){S.rec.acc=p.acc;renderRec();return;}S.rec.cur=p;S.rec.acc=p.acc;feed(B,p);snapRec(false);checkBattery();renderRec();draw();};
   if(demo){const shift=S.trips.length*0.0011;const o={lat:ORIGIN.lat+shift,lon:ORIGIN.lon-shift};const path=wpToLatLon(o,[[0,0],[60,80],[70,210],[190,260],[230,390],[330,430]]);
     S.rec.src=startSim(genFixes(path,{t0:Date.now(),pauses:{3:120000}}),onFix,()=>{$("recnote").textContent="Demo walk finished. Tap “Stop and save” to keep it.";});}
   else S.rec.src=startGPS(onFix,msg=>{$("recnote").textContent=msg;$("recnote").className="note warn";if(!S.rec||!S.rec.B.points.length){recCancel();}});
   wake(true);S.zoom=1;setTab("record");renderRec();
 }
-function recCancel(){if(!S.rec)return;S.rec.src&&S.rec.src.stop();S.rec=null;wake(false);renderRec();draw();}
+function recCancel(){if(!S.rec)return;clearSnap();S.rec.src&&S.rec.src.stop();S.rec=null;wake(false);renderRec();draw();}
 function recStop(){
-  if(!S.rec)return;const {B,demo}=S.rec;S.rec.src&&S.rec.src.stop();const r=finish(B);S.rec=null;wake(false);
+  if(!S.rec)return;const {B,demo}=S.rec;const wasShared=!!S.rec.shared;S.rec.src&&S.rec.src.stop();const r=finish(B);S.rec=null;wake(false);clearSnap();$("recbatt").hidden=true;
   if(r.points.length<2){$("recnote").textContent="Not enough of the route was recorded to save. Try walking a little further.";renderRec();draw();return;}
   const t={id:"t"+Date.now(),name:(demo?"Demo walk, ":"Trip, ")+fmtDate(r.points[0].t),created:r.points[0].t,...r};
   S.trips.unshift(t);S.selId=t.id;saveTrips();$("recnote").className="note";$("recnote").textContent="Saved. Find it in Trips.";setTab("trips");
+  if(!demo&&(wasShared||CONTACTS.length))openArrived(t);
 }
 function renderRec(){
-  const on=!!S.rec;$("recstart").hidden=on;$("recdemo").hidden=on;$("recstop").hidden=!on;$("recdot").className="dot"+(on?" live":"");
+  const on=!!S.rec;$("recstart").hidden=on;$("recdemo").hidden=on;$("recstop").hidden=!on;$("recshare").hidden=!(on&&S.rec.B.points.length>=2);$("recdot").className="dot"+(on?" live":"");
   if(!on){$("recstatus").textContent="Ready to record";return;}
   const B=S.rec.B,pts=B.points;$("recstatus").textContent=S.rec.demo?"Recording · demo walk":"Recording · GPS";
   const el=pts.length?(S.rec.cur.t-pts[0].t):0;$("r-time").textContent=fmtDur(el);$("r-dist").textContent=fmtDist(pathLen(pts));
@@ -370,13 +487,13 @@ function guide(G,pos){
   G.idx=best.i;const A=G.xy[best.i],B=G.xy[best.i+1]||A;const along=G.cum[best.i]+Math.hypot(B.x-A.x,B.y-A.y)*best.f;const remain=Math.max(0,G.total-along);
   const near=G.P.inv({x:A.x+(B.x-A.x)*best.f,y:A.y+(B.y-A.y)*best.f});
   let turn=null;for(let j=best.i+1;j<G.path.length-1;j++){const b1=bearing(G.path[j-1],G.path[j]),b2=bearing(G.path[j],G.path[j+1]);let dl=((b2-b1+540)%360)-180;
-    if(Math.abs(dl)>=35){turn={d:G.cum[j]-along,dir:dl>0?"right":"left",mag:Math.abs(dl)};break;}}
+    if(Math.abs(dl)>=35){turn={d:G.cum[j]-along,dir:dl>0?"right":"left",mag:Math.abs(dl),j};break;}}
   return {off:best.d,remain,along,near,turn};}
 function turnText(tn){const verb=tn.mag>=120?"Make a sharp turn":tn.mag>=60?"Turn":"Bear";return verb+" "+tn.dir;}
 function backStart(demo){
   const G=backPrepare();if(!G)return;if(S.back&&S.back.src)S.back.src.stop();
   S.back={G,demo,trail:[],cur:null,startT:null,src:null,arrived:false,lastT:null};
-  const onFix=p=>{const b=S.back;if(!b||b.arrived)return;if(p.acc&&p.acc>50)return;b.cur=p;if(b.startT===null)b.startT=p.t;b.lastT=p.t;b.trail.push(p);b.g=guide(b.G,p);if(b.g.remain<15&&b.g.off<25){b.arrived=true;b.src&&b.src.stop();wake(false);}renderBack();draw();};
+  const onFix=p=>{const b=S.back;if(!b||b.arrived)return;if(p.acc&&p.acc>50)return;b.cur=p;if(b.startT===null)b.startT=p.t;b.lastT=p.t;b.trail.push(p);b.g=guide(b.G,p);if(b.g.remain<15&&b.g.off<25){b.arrived=true;b.src&&b.src.stop();wake(false);}voiceUpdate(b);checkBattery();renderBack();draw();};
   if(demo){S.back.src=startSim(genFixes(G.path,{t0:Date.now(),speed:1.4,dev:[0.42,0.58,48]}),onFix);}
   else S.back.src=startGPS(onFix,msg=>{$("bk-note").textContent=msg;$("bk-note").className="note warn";if(S.back&&!S.back.trail.length)backEnd();},"back");
   wake(true);S.zoom=1;setTab("back");renderBack();}
@@ -393,19 +510,88 @@ function renderBack(){
   if(!b.g){$("bk-instr").textContent="Finding you…";$("bk-sub").textContent="Waiting for your first position.";return;}
   const g=b.g;$("bk-left").textContent=fmtDist(g.remain);$("bk-off").textContent=fmtDist(g.off);$("bk-time").textContent=fmtDur(b.lastT-b.startT);
   $("bk-bar").style.width=Math.min(100,g.along/(b.G.total||1)*100)+"%";
-  if(b.arrived){$("bk-instr").textContent=there?"You've arrived":"You're back at the start";$("bk-sub").textContent="Walked "+fmtDist(pathLen(b.trail))+" in "+fmtDur(b.lastT-b.startT)+".";return;}
+  $("bk-arrived").hidden=!b.arrived;if(b.arrived){$("bk-instr").textContent=there?"You've arrived":"You're back at the start";$("bk-sub").textContent="Walked "+fmtDist(pathLen(b.trail))+" in "+fmtDur(b.lastT-b.startT)+".";return;}
   if(g.off>25){guideEl.classList.add("off");$("bk-instr").textContent="You've left the path";$("bk-sub").textContent="The path is "+fmtDist(g.off)+" to the "+compass(bearing(b.cur,g.near))+". Head that way to rejoin it.";return;}
   if(g.turn&&g.turn.d<=200){const d=Math.max(0,g.turn.d);$("bk-instr").textContent=d<12?turnText(g.turn)+" now":"In "+fmtDist(Math.round(d/5)*5)+", "+turnText(g.turn).toLowerCase();}
   else $("bk-instr").textContent="Keep straight"+(g.turn?" for "+fmtDist(Math.round(g.turn.d/10)*10):"");
   $("bk-sub").textContent=fmtDist(g.remain)+(there?" to the destination":" to where you started")+". Heading "+compass(bearing(b.cur,b.G.path[Math.min(b.G.idx+1,b.G.path.length-1)]))+".";}
 
+// ---------- voice directions ----------
+// Phone app: native text-to-speech (keeps talking with the screen off).
+// Browser: the built-in speechSynthesis voice.
+const VKEY="wayback.voice";
+const VOICE={on:true};
+try{if(localStorage.getItem(VKEY)==="off")VOICE.on=false;}catch(e){}
+const TTS=NATIVE?window.Capacitor.registerPlugin("TextToSpeech"):null;
+const LANG=(navigator.language&&/^en/i.test(navigator.language))?navigator.language:"en-GB";
+function say(text,flush){
+  if(!VOICE.on||!text)return;
+  if(TTS){TTS.speak({text,lang:LANG,rate:1.0,pitch:1.0,volume:1.0,category:"playback",queueStrategy:flush?0:1}).catch(()=>{});return;}
+  try{const ss=window.speechSynthesis;if(!ss)return;if(flush)ss.cancel();const u=new SpeechSynthesisUtterance(text);u.lang=LANG;u.rate=1;ss.speak(u);}catch(e){}
+}
+function voiceUnlock(){ // browsers only allow speech after a tap
+  if(TTS||!VOICE.on)return;try{const u=new SpeechSynthesisUtterance(" ");u.volume=0;window.speechSynthesis.speak(u);}catch(e){}}
+function spokenDist(m){return m<1000?Math.max(5,Math.round(m/5)*5)+" metres":(m/1000).toFixed(1)+" kilometres";}
+function voiceUpdate(b){
+  if(!VOICE.on||!b.g)return;const g=b.g,there=b.G.dir==="there",fast=b.demo;
+  const V=b.v||(b.v={said:{},offAt:0,wasOff:false,started:false});
+  if(b.arrived){if(!V.said.arr){V.said.arr=1;say(there?"You have arrived.":"You are back at the start.",true);}return;}
+  if(g.off>25||(V.wasOff&&g.off>15)){if(!V.wasOff||b.lastT-V.offAt>30000){V.wasOff=true;V.offAt=b.lastT;say("You have left the path. Walk "+compass(bearing(b.cur,g.near))+" to get back on it.",true);}return;}
+  if(V.wasOff){V.wasOff=false;say("You are back on the path.",true);}
+  if(!V.started){V.started=true;say((there?"Starting. ":"Taking you back. ")+spokenDist(g.remain)+(there?" to the destination.":" to the start."),fast);}
+  if(g.turn){const k=g.turn.j,d=g.turn.d;
+    if(d<=15){if(!V.said["n"+k]){V.said["n"+k]=1;V.said["a"+k]=1;say(turnText(g.turn)+" now.",true);}}
+    else if(d<=60&&!V.said["a"+k]){V.said["a"+k]=1;say("In "+spokenDist(d)+", "+turnText(g.turn).toLowerCase()+".",fast);}
+  }
+}
+function renderVoiceBtn(){const b=$("bk-voice");b.setAttribute("aria-pressed",String(VOICE.on));b.textContent=VOICE.on?"🔊 Voice directions: On":"🔇 Voice directions: Off";}
+
 // ---------- sharing ----------
-function encodeTrip(t){const o={v:1,n:t.name,c:t.created,p:t.points.map(p=>[Math.round(p.lat*1e5),Math.round(p.lon*1e5),Math.round((p.t-t.created)/1000)]),s:t.stops.map(s=>[Math.round(s.lat*1e5),Math.round(s.lon*1e5),Math.round((s.from-t.created)/1000),Math.round((s.to-t.created)/1000)])};
-  return "WB1."+btoa(unescape(encodeURIComponent(JSON.stringify(o))));}
-function decodeTrip(code){code=code.trim().replace(/\s+/g,"");if(!code.startsWith("WB1."))throw new Error("That isn't a WayBack trip code. Codes start with WB1.");
-  let o;try{o=JSON.parse(decodeURIComponent(escape(atob(code.slice(4)))));}catch(e){throw new Error("The code looks incomplete. Copy the whole code and try again.");}
-  if(!o.p||o.p.length<2)throw new Error("This trip has no route in it.");
-  return {id:"t"+Date.now(),name:o.n||"Shared trip",created:o.c,shared:true,points:o.p.map(a=>({lat:a[0]/1e5,lon:a[1]/1e5,t:o.c+a[2]*1000})),stops:(o.s||[]).map(a=>({lat:a[0]/1e5,lon:a[1]/1e5,from:o.c+a[2]*1000,to:o.c+a[3]*1000}))};}
+// Short trip codes (WB2) that fit in one or two SMS. Uses only letters, digits, "-" and "_",
+// which every phone's SMS alphabet supports, so no data is needed to send them.
+const B64="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+const SITE="https://sabigo2026-cell.github.io/wayback/";
+const EPOCH=1577836800; // 2020-01-01, keeps the start time short
+function encNums(arr){let o="";for(const v0 of arr){let v=Math.round(v0);let z=v<0?(-v*2-1):v*2;while(z>=32){o+=B64[(z%32)|32];z=Math.floor(z/32);}o+=B64[z];}return o;}
+function decNums(str){const out=[];let z=0,mul=1;for(const ch of str){const d=B64.indexOf(ch);if(d<0)throw new Error("bad");z+=(d&31)*mul;if(d&32){mul*=32;}else{out.push(z%2?-(z+1)/2:z/2);z=0;mul=1;}}if(mul!==1)throw new Error("cut");return out;}
+function b64text(t){const bytes=new TextEncoder().encode(t);let bits=0,acc=0,o="";for(const b of bytes){acc=(acc<<8)|b;bits+=8;while(bits>=6){bits-=6;o+=B64[(acc>>bits)&63];}acc&=(1<<bits)-1;}if(bits)o+=B64[(acc<<(6-bits))&63];return o;}
+function textb64(s){const out=[];let bits=0,acc=0;for(const ch of s){const d=B64.indexOf(ch);if(d<0)throw new Error("bad");acc=(acc<<6)|d;bits+=6;if(bits>=8){bits-=8;out.push((acc>>bits)&255);acc&=(1<<bits)-1;}}return new TextDecoder().decode(new Uint8Array(out));}
+function encodeTrip(t){
+  const pts=simplify(t.points,3);const t0=pts[0].t;
+  const flat=[];let pl=0,pn=0,pt=0;
+  pts.forEach(p=>{const la=Math.round(p.lat*1e5),lo=Math.round(p.lon*1e5),ts=Math.round((p.t-t0)/1000);flat.push(la-pl,lo-pn,ts-pt);pl=la;pn=lo;pt=ts;});
+  const st=[];const a0=pts[0];t.stops.forEach(x=>st.push(Math.round(x.lat*1e5)-Math.round(a0.lat*1e5),Math.round(x.lon*1e5)-Math.round(a0.lon*1e5),Math.round((x.from-t0)/1000),Math.round((x.to-x.from)/1000)));
+  return "WB2."+b64text((t.name||"Trip").slice(0,40))+"."+encNums([Math.round(t0/1000)-EPOCH])+"."+encNums(flat)+"."+encNums(st);}
+function findCode(text){const m=String(text||"").match(/WB2\.[A-Za-z0-9_-]*\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*|WB1\.[A-Za-z0-9+\/=]+/);return m?m[0]:null;}
+function decodeTrip(input){
+  const code=findCode(String(input||"").replace(/\s+/g,""));
+  if(!code)throw new Error("No WayBack route found. Paste the whole message you received.");
+  if(code.startsWith("WB1.")){let o;try{o=JSON.parse(decodeURIComponent(escape(atob(code.slice(4)))));}catch(e){throw new Error("The route looks incomplete. Copy the whole message and try again.");}
+    if(!o.p||o.p.length<2)throw new Error("This route has no path in it.");
+    return {id:"t"+Date.now(),name:o.n||"Shared trip",created:o.c,shared:true,points:o.p.map(a=>({lat:a[0]/1e5,lon:a[1]/1e5,t:o.c+a[2]*1000})),stops:(o.s||[]).map(a=>({lat:a[0]/1e5,lon:a[1]/1e5,from:o.c+a[2]*1000,to:o.c+a[3]*1000}))};}
+  const parts=code.split(".");let name,t0,flat,st;
+  try{name=textb64(parts[1])||"Shared trip";t0=(decNums(parts[2])[0]+EPOCH)*1000;flat=decNums(parts[3]);st=parts[4]?decNums(parts[4]):[];}
+  catch(e){throw new Error("The route looks incomplete. Copy the whole message and try again.");}
+  if(flat.length<6||flat.length%3)throw new Error("The route looks incomplete. Copy the whole message and try again.");
+  const points=[];let la=0,lo=0,ts=0;for(let i=0;i<flat.length;i+=3){la+=flat[i];lo+=flat[i+1];ts+=flat[i+2];points.push({lat:la/1e5,lon:lo/1e5,t:t0+ts*1000});}
+  const stops=[];for(let i=0;i+3<st.length;i+=4){const f=t0+st[i+2]*1000;stops.push({lat:(Math.round(points[0].lat*1e5)+st[i])/1e5,lon:(Math.round(points[0].lon*1e5)+st[i+1])/1e5,from:f,to:f+st[i+3]*1000});}
+  return {id:"t"+Date.now(),name,created:t0,shared:true,points,stops};}
+function shareMessage(t,live){
+  const code=encodeTrip(t);const end=t.points[t.points.length-1];const st=tripStats(t);
+  const at=end.lat.toFixed(5)+","+end.lon.toFixed(5);
+  return (live?"I'm sharing my route so far with WayBack.":"My route with WayBack: "+t.name+".")+
+    "\n"+(live?"I'm here now":"It ends here")+": https://maps.google.com/?q="+at+" ("+at+")"+
+    "\nRoute: "+fmtDist(st.d)+", "+fmtDur(st.dur)+", "+fmtClock(end.t)+
+    "\nFollow it in WayBack: "+SITE+"#t="+code+
+    "\nNo data? Copy this whole message into WayBack > Trips > Open a shared trip.";}
+// Share sheet
+const SH={text:"",t:null,live:false};
+function openShare(t,live){$("share").classList.remove("sos");$("sh-call").hidden=true;$("sh-to").textContent="";SH.t=t;SH.live=!!live;SH.text=shareMessage(t,live);$("sh-title").textContent=live?"Share where I am":"Share this route";
+  $("sh-sub").textContent=live?"Sends the route you've recorded so far and where you are now.":"Family and friends can see where you went and follow the same path with WayBack.";
+  $("sh-msg").textContent=SH.text;$("sh-len").textContent=SH.text.length+" characters, about "+Math.ceil(SH.text.length/153)+" SMS";
+  $("sh-sms").href="sms:?&body="+encodeURIComponent(SH.text);$("sh-wa").href="https://wa.me/?text="+encodeURIComponent(SH.text);
+  $("sh-copy").textContent="Copy message";$("share").hidden=false;setTimeout(()=>$("sh-sms").focus(),0);}
+function closeShare(){$("share").hidden=true;}
 function copyText(text,el,btn){const done=()=>{btn.textContent="Copied";setTimeout(()=>btn.textContent="Copy code",1600);};
   const sel=()=>{const r=document.createRange();r.selectNodeContents(el);const s=getSelection();s.removeAllRanges();s.addRange(r);btn.textContent="Selected, press copy";};
   try{navigator.clipboard.writeText(text).then(done,sel);}catch(e){sel();}}
@@ -421,25 +607,213 @@ function renderTrips(){
     const m=document.createElement("div");m.className="meta";m.textContent=fmtDate(t.created)+" · "+fmtDist(st.d)+" · "+fmtDur(st.dur)+" · "+st.stops+(st.stops===1?" stop":" stops");c.appendChild(m);
     const r=document.createElement("div");r.className="row";
     r.append(mk("Replay","btn sm primary",()=>{pick(t.id);setTab("replay");}),mk("Take me back","btn sm",()=>{pick(t.id);setDir("back");setTab("back");}),mk("Go there again","btn sm",()=>{pick(t.id);setDir("there");setTab("back");}),
-      mk(S.shareId===t.id?"Hide code":"Share","btn sm",()=>{S.shareId=S.shareId===t.id?null:t.id;pick(t.id);}),mk("Rename","btn sm",()=>{S.editId=t.id;renderTrips();}),
+      mk("Share","btn sm",()=>{pick(t.id);openShare(t,false);}),...(t.shared?[dirLink(t)]:[]),mk("Rename","btn sm",()=>{S.editId=t.id;renderTrips();}),
       mk("Delete","btn sm danger",()=>{S.confirmId=t.id;renderTrips();}));
     c.appendChild(r);
     if(S.confirmId===t.id){const q=document.createElement("div");q.className="row";q.style.alignItems="center";const s=document.createElement("span");s.className="note warn";s.textContent="Delete this trip for good?";
       q.append(s,mk("Delete","btn sm danger",()=>{S.trips=S.trips.filter(x=>x.id!==t.id);if(S.selId===t.id)S.selId=S.trips[0]?S.trips[0].id:null;S.confirmId=null;saveTrips();if(S.back&&S.back.G.id===t.id)backEnd();renderAll();}),mk("Keep","btn sm",()=>{S.confirmId=null;renderTrips();}));c.appendChild(q);}
-    if(S.shareId===t.id){const code=encodeTrip(t);const n=document.createElement("p");n.className="note";n.textContent="Send this code to family or friends. They paste it into WayBack to replay your route or follow it themselves.";
-      const pre=document.createElement("div");pre.className="code";pre.textContent=code;const b=mk("Copy code","btn sm",()=>copyText(code,pre,b));c.append(n,pre,b);}
     c.addEventListener("click",e=>{if(e.target.closest("button,input"))return;pick(t.id);});
     box.appendChild(c);});
   if(!S.trips.length){const e=document.createElement("p");e.className="empty";e.textContent="No trips yet. Record your first one in Record.";box.appendChild(e);}
 }
+function dirLink(t){const e=t.points[t.points.length-1];const a=document.createElement("a");a.className="btn sm";a.target="_blank";a.rel="noopener";
+  a.href="https://www.google.com/maps/dir/?api=1&destination="+e.lat.toFixed(5)+","+e.lon.toFixed(5);a.textContent="Directions";return a;}
 function mk(label,cls,fn){const b=document.createElement("button");b.className=cls;b.textContent=label;b.type="button";b.onclick=fn;return b;}
 function pick(id){if(S.selId!==id){pausePlay();S.play=null;if(S.back&&S.back.G.id!==id)backEnd();}S.selId=id;S.zoom=1;renderAll();}
+
+// ---------- sponsored adverts ----------
+// Adverts live in ads.json on GitHub (https://sabigo2026-cell.github.io/wayback/ads.json).
+// Edit that file to add, change or remove adverts. The app keeps the last copy for offline use.
+const ADS_URL="https://sabigo2026-cell.github.io/wayback/ads.json";
+const ADS_KEY="wayback.ads.v1";
+const TZ_CC={"Africa/Lagos":"NG","Africa/Accra":"GH","Africa/Nairobi":"KE","Africa/Johannesburg":"ZA","Africa/Cairo":"EG","Africa/Abidjan":"CI","Africa/Dakar":"SN","Africa/Douala":"CM","Africa/Kampala":"UG","Africa/Dar_es_Salaam":"TZ","Africa/Kigali":"RW","Africa/Addis_Ababa":"ET","Africa/Lome":"TG","Africa/Porto-Novo":"BJ","Africa/Freetown":"SL","Africa/Monrovia":"LR","Africa/Banjul":"GM","Africa/Bamako":"ML","Africa/Ouagadougou":"BF","Africa/Niamey":"NE","Africa/Kinshasa":"CD","Africa/Lusaka":"ZM","Africa/Harare":"ZW","Africa/Casablanca":"MA","Europe/London":"GB","America/New_York":"US","America/Chicago":"US","America/Denver":"US","America/Los_Angeles":"US","America/Toronto":"CA","Asia/Dubai":"AE","Asia/Kolkata":"IN"};
+function userCountry(){
+  try{const tz=Intl.DateTimeFormat().resolvedOptions().timeZone;if(TZ_CC[tz])return TZ_CC[tz];}catch(e){}
+  try{const m=(navigator.language||"").match(/-([A-Za-z]{2})$/);if(m)return m[1].toUpperCase();}catch(e){}
+  return "";}
+let ADS=[];let adPick={};
+try{const c=localStorage.getItem(ADS_KEY);if(c)ADS=JSON.parse(c)||[];}catch(e){}
+function loadAds(){
+  if(!window.fetch)return;
+  fetch(ADS_URL+"?t="+Math.floor(Date.now()/600000),{cache:"no-store"}).then(r=>r.ok?r.json():null).then(j=>{
+    if(!j||!Array.isArray(j.ads))return;ADS=j.ads;adPick={};try{localStorage.setItem(ADS_KEY,JSON.stringify(ADS));}catch(e){}renderAds();}).catch(()=>{});}
+function eligibleAds(){const cc=userCountry(),today=new Date().toISOString().slice(0,10);
+  return ADS.filter(a=>a&&a.active!==false&&a.title&&(!a.start||a.start<=today)&&(!a.end||a.end>=today)&&
+    (!a.countries||!a.countries.length||a.countries.includes("ALL")||(cc&&a.countries.map(x=>String(x).toUpperCase()).includes(cc))));}
+function renderAd(slotId){
+  const slot=$(slotId);if(!slot)return;slot.innerHTML="";const list=eligibleAds();if(!list.length)return;
+  if(!(slotId in adPick)||!list.includes(adPick[slotId]))adPick[slotId]=list[Math.floor(Math.random()*list.length)];
+  const a=adPick[slotId];const card=document.createElement("div");card.className="ad";
+  if(a.image&&/^https:\/\//.test(a.image)){const im=document.createElement("img");im.src=a.image;im.alt="";im.onerror=()=>im.remove();card.appendChild(im);}
+  const tx=document.createElement("div");tx.className="adtxt";
+  const l=document.createElement("span");l.className="adlbl";l.textContent="Sponsored";tx.appendChild(l);
+  const b=document.createElement("b");b.textContent=a.title;tx.appendChild(b);
+  if(a.text){const p=document.createElement("p");p.textContent=a.text;tx.appendChild(p);}
+  if(a.phone){const p=document.createElement("p");p.textContent="Call: "+a.phone;p.style.userSelect="text";tx.appendChild(p);}
+  if(a.link&&/^(https:\/\/|mailto:)/.test(a.link)){const k=document.createElement("a");k.href=a.link;k.target="_blank";k.rel="noopener";k.textContent=a.button||"Learn more";tx.appendChild(k);}
+  card.appendChild(tx);slot.appendChild(card);}
+function renderAds(){renderAd("ad-trips");renderAd("ad-replay");}
+
+// ---------- emergency contacts ----------
+const CKEY="wayback.contacts.v1";
+function loadContacts(){try{const c=JSON.parse(localStorage.getItem(CKEY)||"[]");return Array.isArray(c)?c:[];}catch(e){return [];}}
+let CONTACTS=loadContacts();
+function cleanPhone(x){return String(x||"").replace(/[^0-9+]/g,"");}
+function renderContacts(){const box=$("contacts");box.innerHTML="";
+  for(let i=0;i<3;i++){const c=CONTACTS[i]||{};const r=document.createElement("div");r.className="crow";
+    const n=document.createElement("input");n.id="cname"+i;n.placeholder="Name (e.g. Brother)";n.value=c.name||"";n.setAttribute("aria-label","Contact "+(i+1)+" name");
+    const ph=document.createElement("input");ph.id="cphone"+i;ph.type="tel";ph.placeholder="Phone (e.g. 0803 123 4567)";ph.value=c.phone||"";ph.setAttribute("aria-label","Contact "+(i+1)+" phone");
+    r.append(n,ph);box.appendChild(r);}}
+function saveContacts(){const out=[];for(let i=0;i<3;i++){const name=$("cname"+i).value.trim(),phone=cleanPhone($("cphone"+i).value);if(phone.length>=7)out.push({name:name||"Contact "+(i+1),phone});}
+  CONTACTS=out;try{localStorage.setItem(CKEY,JSON.stringify(out));}catch(e){}
+  $("contactsnote").textContent=out.length?"Saved "+out.length+(out.length===1?" contact.":" contacts."):"No contacts saved. Add at least one phone number.";}
+function contactNames(){return CONTACTS.map(c=>c.name).join(", ");}
+function smsHref(text){const to=CONTACTS.map(c=>c.phone).join(",");return "sms:"+to+"?&body="+encodeURIComponent(text);}
+
+// ---------- current position (for SOS) ----------
+function lastKnown(){
+  if(S.rec&&S.rec.cur)return S.rec.cur;if(S.back&&S.back.cur)return S.back.cur;return null;}
+function oneFix(cb){ // quick single GPS reading, max ~12 s
+  let done=false;const finishFix=p=>{if(done)return;done=true;try{src&&src.stop();}catch(e){}clearTimeout(tm);cb(p);};
+  const tm=setTimeout(()=>finishFix(null),12000);
+  const src=startGPS(p=>{if(p.acc&&p.acc>100)return;finishFix(p);},()=>finishFix(null),"sos");}
+
+// ---------- SOS ----------
+function sosMessage(p){
+  let m="SOS from WayBack: I NEED HELP.";
+  if(p){const at=p.lat.toFixed(5)+","+p.lon.toFixed(5);m+="\nMy location: https://maps.google.com/?q="+at+" ("+at+")"+(p.acc?" accurate to about "+Math.round(p.acc)+" m":"")+", "+fmtClock(p.t||Date.now())+".";}
+  else m+="\nI couldn't get my GPS location.";
+  if(S.rec&&S.rec.B.points.length>=2){const B=S.rec.B;m+="\nMy route so far: "+SITE+"#t="+encodeTrip({name:"SOS route",created:B.points[0].t,points:B.points,stops:B.stops});}
+  return m+"\nPlease call me. If you can't reach me, call 112.";}
+function openSOS(p){
+  const text=sosMessage(p);SH.text=text;
+  $("share").classList.add("sos");$("sh-title").textContent="Send SOS";
+  $("sh-sub").textContent=CONTACTS.length?"Tap Send by SMS, then press Send in your messages app.":"Add emergency contacts in Help so SOS goes straight to them. For now, pick who to send it to.";
+  $("sh-msg").textContent=text;$("sh-len").textContent=text.length+" characters, about "+Math.ceil(text.length/153)+" SMS";
+  $("sh-sms").href=CONTACTS.length?smsHref(text):"sms:?&body="+encodeURIComponent(text);
+  $("sh-wa").href="https://wa.me/?text="+encodeURIComponent(text);
+  $("sh-to").textContent=CONTACTS.length?"To: "+contactNames():"";$("sh-call").hidden=false;
+  $("sh-copy").textContent="Copy message";$("share").hidden=false;setTimeout(()=>$("sh-sms").focus(),0);}
+function triggerSOS(){
+  try{navigator.vibrate&&navigator.vibrate([200,100,200]);}catch(e){}
+  const p=lastKnown();if(p){openSOS(p);return;}
+  openSOS(null);$("sh-sub").textContent="Getting your location…";
+  oneFix(fix=>{if($("share").hidden||!$("share").classList.contains("sos"))return;openSOS(fix);});}
+(function(){const b=()=>$("sosbtn");let tm=null;
+  const start=e=>{e.preventDefault();b().classList.add("hold");tm=setTimeout(()=>{b().classList.remove("hold");tm=null;triggerSOS();},2000);};
+  const cancel=()=>{if(tm){clearTimeout(tm);tm=null;b().classList.remove("hold");
+      const n=$("sosbtn");n.title="Press and hold for 2 seconds";}};
+  document.addEventListener("DOMContentLoaded",()=>{},{once:true});
+  setTimeout(()=>{const el=b();el.addEventListener("pointerdown",start);["pointerup","pointerleave","pointercancel"].forEach(ev=>el.addEventListener(ev,cancel));
+    el.addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&!e.repeat&&!tm)start(e);});el.addEventListener("keyup",e=>{if(e.key==="Enter"||e.key===" ")cancel();});
+    el.addEventListener("contextmenu",e=>e.preventDefault());},0);})();
+
+// ---------- "I've arrived" message ----------
+function arrivedMessage(t){const end=t.points[t.points.length-1];const at=end.lat.toFixed(5)+","+end.lon.toFixed(5);
+  return "I arrived safely at "+fmtClock(end.t)+" (WayBack).\nI'm here: https://maps.google.com/?q="+at+" ("+at+")\nMy route: "+SITE+"#t="+encodeTrip(t);}
+function openArrived(t){const text=arrivedMessage(t);SH.text=text;$("share").classList.remove("sos");$("sh-call").hidden=true;
+  $("sh-title").textContent="Tell family you arrived";$("sh-sub").textContent="So they know you're safe, and where you ended up.";
+  $("sh-msg").textContent=text;$("sh-len").textContent=text.length+" characters, about "+Math.ceil(text.length/153)+" SMS";
+  $("sh-sms").href=CONTACTS.length?smsHref(text):"sms:?&body="+encodeURIComponent(text);$("sh-wa").href="https://wa.me/?text="+encodeURIComponent(text);
+  $("sh-to").textContent=CONTACTS.length?"To: "+contactNames():"";$("sh-copy").textContent="Copy message";$("share").hidden=false;}
+
+// ---------- low battery ----------
+const BATT={warned:false,level:1,charging:true};
+function checkBattery(){const active=!!(S.rec&&!S.rec.demo)||!!(S.back&&!S.back.demo&&!S.back.arrived);
+  const low=BATT.level<=0.15&&!BATT.charging;
+  $("recbatt").hidden=!(low&&S.rec&&!S.rec.demo);
+  if(low&&active&&!BATT.warned){BATT.warned=true;say("Battery low. Send your location to family before your phone switches off.",true);
+    if(S.back){$("bk-note").className="note warn";$("bk-note").textContent="Battery low. Use SOS or Share to send your location before your phone switches off.";}}}
+try{if(navigator.getBattery)navigator.getBattery().then(b=>{const u=()=>{BATT.level=b.level;BATT.charging=b.charging;checkBattery();};u();b.addEventListener("levelchange",u);b.addEventListener("chargingchange",u);}).catch(()=>{});}catch(e){}
+
+// ---------- unfinished trip recovery ----------
+const IKEY="wayback.inprogress.v1";let lastSnap=0;
+function snapRec(force){if(!S.rec||S.rec.demo)return;const now=Date.now();if(!force&&now-lastSnap<5000)return;lastSnap=now;
+  const B=S.rec.B;try{localStorage.setItem(IKEY,JSON.stringify({points:B.points.concat(B.last&&B.last!==B.points[B.points.length-1]?[B.last]:[]),stops:B.stops.concat(B.open?[B.open]:[]),shared:!!S.rec.shared}));}catch(e){}}
+window.addEventListener("pagehide",()=>snapRec(true));
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")snapRec(true);});
+function clearSnap(){try{localStorage.removeItem(IKEY);}catch(e){}}
+function recoverSnap(){let o=null;try{o=JSON.parse(localStorage.getItem(IKEY)||"null");}catch(e){}clearSnap();
+  if(!o||!Array.isArray(o.points)||o.points.length<2)return null;
+  const t={id:"t"+Date.now(),name:"Unfinished trip, "+fmtDate(o.points[0].t)+" (recovered)",created:o.points[0].t,points:o.points,stops:o.stops||[]};
+  S.trips.unshift(t);S.selId=t.id;saveTrips();return t;}
+
+// ---------- battery guide ----------
+// Shown once before the first GPS recording or guidance. Phone makers (Tecno, Infinix, itel,
+// Xiaomi and others) often stop apps in the background, which cuts recordings short.
+const BKEY="wayback.battery.v1";
+const IS_ANDROID=/Android/i.test(navigator.userAgent);
+const BRANDS=[
+ {id:"transsion",name:"Tecno / Infinix / itel",re:/tecno|infinix|itel/i,steps:[
+  "Open <b>Settings → Apps</b> (or <b>App management</b>) and tap <b>WayBack</b>.",
+  "Tap <b>Battery</b> (or <b>Power</b>) and choose <b>No restrictions</b> or turn on <b>Allow background activity</b>.",
+  "Open the <b>Phone Master</b> app → <b>App launch</b> (or <b>Auto-start management</b>) and allow <b>WayBack</b>.",
+  "Make sure <b>Power saving mode</b> is off while you record."],
+  tip:"Also open recent apps, hold WayBack and tap the padlock so the phone doesn't close it."},
+ {id:"xiaomi",name:"Xiaomi / Redmi / POCO",re:/xiaomi|redmi|poco|\bmi \d|\bM\d{4}/i,steps:[
+  "Open <b>Settings → Apps → Manage apps</b> and tap <b>WayBack</b>.",
+  "Tap <b>Battery saver</b> and choose <b>No restrictions</b>.",
+  "Back on the WayBack page, turn on <b>Autostart</b>."],
+  tip:"Also open recent apps, press and hold WayBack and tap the padlock."},
+ {id:"samsung",name:"Samsung",re:/samsung|\bSM-/i,steps:[
+  "Open <b>Settings → Apps</b> and tap <b>WayBack</b>.",
+  "Tap <b>Battery</b> and choose <b>Unrestricted</b>.",
+  "In <b>Settings → Battery → Background usage limits</b>, make sure WayBack is not in <b>Sleeping</b> or <b>Deep sleeping apps</b>."],
+  tip:""},
+ {id:"oppo",name:"Oppo / Realme / OnePlus",re:/oppo|realme|oneplus|\bCPH\d|\bRMX\d/i,steps:[
+  "Open <b>Settings → Apps → App management</b> and tap <b>WayBack</b>.",
+  "Tap <b>Battery usage</b> and turn on <b>Allow background activity</b>.",
+  "Turn on <b>Allow auto launch</b> if you see it."],
+  tip:"Also lock WayBack in recent apps."},
+ {id:"vivo",name:"Vivo",re:/vivo|\bV\d{4}/i,steps:[
+  "Open <b>Settings → Battery → Background power consumption management</b>.",
+  "Tap <b>WayBack</b> and choose <b>Allow</b>.",
+  "In <b>Settings → Apps → WayBack</b>, turn on <b>Auto-start</b> if you see it."],
+  tip:""},
+ {id:"other",name:"Other Android",re:/$^/,steps:[
+  "Open <b>Settings → Apps</b> and tap <b>WayBack</b>.",
+  "Tap <b>Battery</b> and choose <b>Unrestricted</b> or <b>Don't optimise</b>.",
+  "Turn off <b>Battery saver</b> while you record."],
+  tip:""}];
+function detectBrand(){const ua=navigator.userAgent||"";const b=BRANDS.find(x=>x.re.test(ua));return b?b.id:"other";}
+const BT={brand:detectBrand(),then:null};
+function renderBattery(){
+  const native=NATIVE&&IS_ANDROID,iosApp=NATIVE&&!IS_ANDROID;
+  $("bt-native").hidden=!native;$("bt-open").hidden=!native;
+  const steps=$("bt-steps");steps.innerHTML="";
+  if(native){
+    $("bt-title").textContent="Keep WayBack recording with the screen off";
+    $("bt-intro").textContent="Many phones close apps in the background to save battery, which can stop your recording halfway. Change these settings once and WayBack keeps working in your pocket. The exact words may differ slightly on your phone.";
+    const box=$("bt-brands");box.innerHTML="";
+    BRANDS.forEach(b=>{const x=document.createElement("button");x.type="button";x.textContent=b.name;x.setAttribute("aria-pressed",String(b.id===BT.brand));x.onclick=()=>{BT.brand=b.id;renderBattery();};box.appendChild(x);});
+    const b=BRANDS.find(x=>x.id===BT.brand)||BRANDS[BRANDS.length-1];
+    b.steps.forEach(t=>{const li=document.createElement("li");li.innerHTML=t;steps.appendChild(li);});
+    $("bt-tip").textContent=b.tip||"Keep the “WayBack is using your location” notification. Swiping it away can stop the recording.";
+    $("bt-tip").hidden=false;
+  }else if(iosApp){
+    $("bt-title").textContent="Let WayBack use your location";
+    $("bt-intro").textContent="When your iPhone asks, choose “Allow While Using App”. Later it may ask again: choose “Change to Always Allow” so WayBack keeps recording with the screen locked.";
+    ["Turn off <b>Low Power Mode</b> while you record, if you can.","If you said no by mistake: <b>Settings → WayBack → Location → Always</b>."].forEach(t=>{const li=document.createElement("li");li.innerHTML=t;steps.appendChild(li);});
+    $("bt-tip").hidden=true;
+  }else{
+    $("bt-title").textContent="Keep this screen on";
+    $("bt-intro").textContent="This is the test version of WayBack running in your browser. Browsers pause pages when the screen goes off, so recording only works while WayBack stays open on screen.";
+    ["Tap <b>Allow</b> when your browser asks for your location.","Keep WayBack open and the screen on until you tap <b>Stop and save</b>.","Turn off <b>Battery saver</b> while you record."].forEach(t=>{const li=document.createElement("li");li.innerHTML=t;steps.appendChild(li);});
+    $("bt-tip").textContent="The Play Store and App Store versions keep recording with the screen off.";$("bt-tip").hidden=false;
+  }
+  $("bt-done").textContent=native?"I've done it":"OK";$("bt-later").hidden=!native;
+}
+function showBattery(then){BT.then=then||null;renderBattery();$("battery").hidden=false;setTimeout(()=>$("bt-done").focus(),0);}
+function closeBattery(remember){$("battery").hidden=true;if(remember){try{localStorage.setItem(BKEY,"done");}catch(e){}}const f=BT.then;BT.then=null;if(f)f();}
+function batteryDone(){try{return localStorage.getItem(BKEY)==="done";}catch(e){return false;}}
+// Run `action` now, or show the guide first if this phone hasn't seen it yet.
+function withBatteryCheck(action){if(batteryDone()){action();return;}showBattery(action);}
 
 // ---------- tabs ----------
 function setDir(d){if(S.dir===d)return;S.dir=d;if(S.back)backEnd();renderBack();draw();}
 function setTab(tab){S.tab=tab;document.querySelectorAll(".tabs button").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.tab===tab)));
-  ["record","trips","replay","back"].forEach(v=>$("v-"+v).hidden=v!==tab);if(tab!=="replay")pausePlay();renderAll();}
-function renderAll(){const t=sel();$("chip").textContent=t?t.name:"No trip selected";renderRec();renderTrips();renderReplay();renderBack();draw();}
+  ["record","trips","replay","back","help"].forEach(v=>$("v-"+v).hidden=v!==tab);$("helpbtn").setAttribute("aria-pressed",String(tab==="help"));if(tab!=="replay")pausePlay();renderAll();}
+function renderAll(){renderAds();const t=sel();$("chip").textContent=t?t.name:"No trip selected";renderRec();renderTrips();renderReplay();renderBack();draw();}
 
 // ---------- map drawing ----------
 const cv=$("map"),ctx=cv.getContext("2d");
@@ -489,17 +863,53 @@ function draw(){
 
 // ---------- events ----------
 document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
-$("recstart").onclick=()=>{$("recnote").className="note";recStart(false);};
+$("recstart").onclick=()=>{$("recnote").className="note";withBatteryCheck(()=>recStart(false));};
 $("recdemo").onclick=()=>{$("recnote").className="note";$("recnote").textContent="Demo walk running at high speed. It includes a two-minute stop.";recStart(true);};
 $("recstop").onclick=recStop;
 $("rp-play").onclick=togglePlay;
 $("rp-speed").onclick=e=>{const b=e.target.closest("button");if(!b||!S.play)return;S.play.speed=+b.dataset.s;renderReplay();};
 $("rp-scrub").oninput=e=>{const t=sel();if(!t||!S.play)return;pausePlay();const t0=t.points[0].t,t1=t.points[t.points.length-1].t;S.play.t=t0+(t1-t0)*(+e.target.value/1000);renderReplay();draw();};
-$("bk-start").onclick=()=>{$("bk-note").className="note";$("bk-note").textContent="Works without data or signal. The route is already on your phone.";backStart(false);};
-$("bk-demo").onclick=()=>{$("bk-note").className="note";$("bk-note").textContent="Demo walk back. Partway along it wanders off the path so you can see the warning.";backStart(true);};
+$("bk-start").onclick=()=>{voiceUnlock();$("bk-note").className="note";$("bk-note").textContent="Works without data or signal. The route is already on your phone.";withBatteryCheck(()=>backStart(false));};
+$("bk-demo").onclick=()=>{voiceUnlock();$("bk-note").className="note";$("bk-note").textContent="Demo walk back. Partway along it wanders off the path so you can see the warning.";backStart(true);};
 $("bk-end").onclick=backEnd;
+$("bt-done").onclick=()=>closeBattery(true);
+$("bt-later").onclick=()=>closeBattery(false);
+$("bt-open").onclick=()=>{try{BG&&BG.openSettings();}catch(e){}};
+$("showbattery").onclick=()=>showBattery(null);
+const HB={brand:/iPhone|iPad/i.test(navigator.userAgent)?"iphone":detectBrand()};
+function renderHelpBattery(){
+  const list=BRANDS.concat([{id:"iphone",name:"iPhone",steps:["Open <b>Settings → WayBack → Location</b> and choose <b>Always</b>.","Make sure <b>Precise Location</b> is on.","Turn off <b>Low Power Mode</b> while you record (Settings → Battery)."],tip:"iPhone keeps WayBack recording once location is set to Always."}]);
+  const box=$("hb-brands");box.innerHTML="";
+  list.forEach(b=>{const x=document.createElement("button");x.type="button";x.textContent=b.name;x.setAttribute("aria-pressed",String(b.id===HB.brand));x.onclick=()=>{HB.brand=b.id;renderHelpBattery();};box.appendChild(x);});
+  const b=list.find(x=>x.id===HB.brand)||list[list.length-2];const ol=$("hb-steps");ol.innerHTML="";
+  b.steps.forEach(t=>{const li=document.createElement("li");li.innerHTML=t;ol.appendChild(li);});
+  $("hb-tip").textContent=b.tip||"Keep the “WayBack is using your location” notification while recording. Swiping it away can stop the recording.";}
+renderHelpBattery();
+$("helpopenset").hidden=!(NATIVE&&IS_ANDROID);$("helpopenset").onclick=()=>{try{BG&&BG.openSettings();}catch(e){}};
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("battery").hidden)closeBattery(false);});
+$("bk-voice").onclick=()=>{VOICE.on=!VOICE.on;try{localStorage.setItem(VKEY,VOICE.on?"on":"off");}catch(e){}renderVoiceBtn();
+  if(VOICE.on)say("Voice directions on.",true);else{try{TTS?TTS.stop():window.speechSynthesis&&window.speechSynthesis.cancel();}catch(e){}}};
+renderVoiceBtn();
+$("helpbtn").onclick=()=>setTab(S.tab==="help"?"trips":"help");
+$("copymail").onclick=()=>copyText("waybacksupport@gmail.com",$("mail1"),{set textContent(v){$("copymail").textContent=v==="Copy code"?"Copy email":v;}});
+loadAds();
 $("bk-dir").onclick=e=>{const b=e.target.closest("button");if(b)setDir(b.dataset.d);};
-$("importbtn").onclick=()=>{const n=$("importnote");try{const t=decodeTrip($("importcode").value);S.trips.unshift(t);S.selId=t.id;saveTrips();$("importcode").value="";n.className="note";n.textContent="Added “"+t.name+"”.";renderAll();}catch(e){n.className="note warn";n.textContent=e.message;}};
+function addShared(t,n){S.trips.unshift(t);S.selId=t.id;saveTrips();n.className="note";n.textContent="Added “"+t.name+"”. Tap Replay to see it, or Go there again to follow it.";renderAll();}
+$("importbtn").onclick=()=>{const n=$("importnote");try{const t=decodeTrip($("importcode").value);$("importcode").value="";addShared(t,n);}catch(e){n.className="note warn";n.textContent=e.message;}};
+$("recshare").onclick=()=>{if(!S.rec)return;const B=S.rec.B;const pts=B.points.concat(B.last&&B.last!==B.points[B.points.length-1]?[B.last]:[]);if(pts.length<2)return;
+  S.rec.shared=true;openShare({name:"Route so far, "+fmtDate(pts[0].t),created:pts[0].t,points:pts,stops:B.stops.concat(B.open?[B.open]:[])},true);};
+$("sh-close").onclick=closeShare;
+$("savecontacts").onclick=saveContacts;renderContacts();
+$("recbattsend").onclick=()=>{$("recshare").click();};
+$("bk-tellfam").onclick=()=>{const b=S.back;if(!b||b.trail.length<2)return;const t0=b.trail[0].t;openArrived({name:"Walk, "+fmtDate(t0),created:t0,points:b.trail,stops:[]});};
+$("share").addEventListener("click",e=>{if(e.target.id==="share")closeShare();});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("share").hidden)closeShare();});
+$("sh-copy").onclick=()=>{const b=$("sh-copy");try{navigator.clipboard.writeText(SH.text).then(()=>{b.textContent="Copied";},()=>{selectEl($("sh-msg"));b.textContent="Selected, press copy";});}catch(e){selectEl($("sh-msg"));b.textContent="Selected, press copy";}};
+function selectEl(el){const r=document.createRange();r.selectNodeContents(el);const s=getSelection();s.removeAllRanges();s.addRange(r);}
+// Opened from a shared link (…/wayback/#t=WB2…): add the route automatically.
+(function(){const h=decodeURIComponent(location.hash||"");if(!/^#t=/.test(h))return;
+  try{const t=decodeTrip(h.slice(3));if(!S.trips.some(x=>x.name===t.name&&x.created===t.created)){S.trips.unshift(t);saveTrips();}S.selId=(S.trips.find(x=>x.name===t.name&&x.created===t.created)||t).id;S.openShared=true;}catch(e){S.sharedErr=e.message;}
+  try{history.replaceState(null,"",location.pathname+location.search);}catch(e){}})();
 $("zin").onclick=()=>{S.zoom=Math.min(8,S.zoom*1.6);draw();};
 $("zout").onclick=()=>{S.zoom=Math.max(0.4,S.zoom/1.6);draw();};
 $("zfit").onclick=()=>{S.zoom=1;draw();};
@@ -509,8 +919,16 @@ new MutationObserver(draw).observe(document.documentElement,{attributes:true,att
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&(S.rec||S.back))wake(true);});
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(draw);
 
+// Browser version: save the app on the phone so it opens with data off.
+if(!NATIVE&&"serviceWorker" in navigator&&(location.protocol==="https:"||location.hostname==="localhost")){
+  window.addEventListener("load",()=>{navigator.serviceWorker.register("sw.js").catch(()=>{});});}
+
 // Open on the sample trip in replay so the first view shows what WayBack does
-setTab(S.trips.some(t=>!t.sample)?"trips":"replay");
+const RECOVERED=recoverSnap();
+setTab(RECOVERED||S.openShared||S.sharedErr||S.trips.some(t=>!t.sample)?"trips":"replay");
+if(RECOVERED){$("importnote").className="note";$("importnote").textContent="WayBack closed during a recording. Your route so far was saved as “"+RECOVERED.name+"”.";}
+if(S.openShared){$("importnote").className="note";$("importnote").textContent="Shared route added. Tap Replay to see it, or Go there again to follow it.";}
+if(S.sharedErr){$("importnote").className="note warn";$("importnote").textContent=S.sharedErr;}
 })();
 </script>
 
