@@ -118,7 +118,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .steps li{padding-left:2px}
 .steps b{font-weight:600}
 .tip{font-size:.85rem;background:var(--bg);border-radius:10px;padding:10px 12px;color:var(--muted)}
-.sosbtn{position:relative;overflow:hidden;border:0;background:var(--warn);color:#fff;border-radius:999px;padding:4px 12px;font-size:.8rem;font-weight:800;letter-spacing:.06em;cursor:pointer;white-space:nowrap;touch-action:none;user-select:none;-webkit-user-select:none}
+.sosbtn{-webkit-touch-callout:none;position:relative;overflow:hidden;border:0;background:var(--warn);color:#fff;border-radius:999px;padding:4px 12px;font-size:.8rem;font-weight:800;letter-spacing:.06em;cursor:pointer;white-space:nowrap;touch-action:none;user-select:none;-webkit-user-select:none}
 .sosbtn i{position:absolute;inset:0;background:rgba(0,0,0,.28);transform-origin:left;transform:scaleX(0)}
 .sosbtn.hold i{transform:scaleX(1);transition:transform 2s linear}
 .sosbtn span{position:relative}
@@ -139,7 +139,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 <div class="app">
   <header>
     <div class="brand"><h1>Way<span>Back</span></h1><p>Record once. Replay it. Find your way back.</p></div>
-    <div class="hdr-right"><div class="chip" id="chip">No trip selected</div><button class="helpbtn" id="helpbtn" aria-pressed="false">Help</button><button class="sosbtn" id="sosbtn" type="button" aria-label="SOS. Press and hold for 2 seconds to send for help"><i></i><span>SOS</span></button></div>
+    <div class="hdr-right"><div class="chip" id="chip">No trip selected</div><button class="helpbtn" id="helpbtn" aria-pressed="false">Help</button><button class="sosbtn" id="sosbtn" type="button" aria-label="SOS. Opens a help message with your location"><i></i><span>SOS</span></button></div>
   </header>
 
   <div class="mapwrap">
@@ -589,7 +589,7 @@ const SH={text:"",t:null,live:false};
 function openShare(t,live){$("share").classList.remove("sos");$("sh-call").hidden=true;$("sh-to").textContent="";SH.t=t;SH.live=!!live;SH.text=shareMessage(t,live);$("sh-title").textContent=live?"Share where I am":"Share this route";
   $("sh-sub").textContent=live?"Sends the route you've recorded so far and where you are now.":"Family and friends can see where you went and follow the same path with WayBack.";
   $("sh-msg").textContent=SH.text;$("sh-len").textContent=SH.text.length+" characters, about "+Math.ceil(SH.text.length/153)+" SMS";
-  $("sh-sms").href="sms:?&body="+encodeURIComponent(SH.text);$("sh-wa").href="https://wa.me/?text="+encodeURIComponent(SH.text);
+  $("sh-sms").href=smsLink([],SH.text);$("sh-wa").href="https://wa.me/?text="+encodeURIComponent(SH.text);
   $("sh-copy").textContent="Copy message";$("share").hidden=false;setTimeout(()=>$("sh-sms").focus(),0);}
 function closeShare(){$("share").hidden=true;}
 function copyText(text,el,btn){const done=()=>{btn.textContent="Copied";setTimeout(()=>btn.textContent="Copy code",1600);};
@@ -668,7 +668,11 @@ function saveContacts(){const out=[];for(let i=0;i<3;i++){const name=$("cname"+i
   CONTACTS=out;try{localStorage.setItem(CKEY,JSON.stringify(out));}catch(e){}
   $("contactsnote").textContent=out.length?"Saved "+out.length+(out.length===1?" contact.":" contacts."):"No contacts saved. Add at least one phone number.";}
 function contactNames(){return CONTACTS.map(c=>c.name).join(", ");}
-function smsHref(text){const to=CONTACTS.map(c=>c.phone).join(",");return "sms:"+to+"?&body="+encodeURIComponent(text);}
+const IS_IOS=/iPhone|iPad|iPod/i.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+function smsLink(numbers,text){const b=encodeURIComponent(text);const to=(numbers||[]).join(",");
+  if(IS_IOS)return to?(numbers.length>1?"sms:/open?addresses="+to+"&body="+b:"sms:"+to+"&body="+b):"sms:&body="+b;
+  return "sms:"+to+"?body="+b;}
+function smsHref(text){return smsLink(CONTACTS.map(c=>c.phone),text);}
 
 // ---------- current position (for SOS) ----------
 function lastKnown(){
@@ -690,7 +694,7 @@ function openSOS(p){
   $("share").classList.add("sos");$("sh-title").textContent="Send SOS";
   $("sh-sub").textContent=CONTACTS.length?"Tap Send by SMS, then press Send in your messages app.":"Add emergency contacts in Help so SOS goes straight to them. For now, pick who to send it to.";
   $("sh-msg").textContent=text;$("sh-len").textContent=text.length+" characters, about "+Math.ceil(text.length/153)+" SMS";
-  $("sh-sms").href=CONTACTS.length?smsHref(text):"sms:?&body="+encodeURIComponent(text);
+  $("sh-sms").href=smsHref(text);
   $("sh-wa").href="https://wa.me/?text="+encodeURIComponent(text);
   $("sh-to").textContent=CONTACTS.length?"To: "+contactNames():"";$("sh-call").hidden=false;
   $("sh-copy").textContent="Copy message";$("share").hidden=false;setTimeout(()=>$("sh-sms").focus(),0);}
@@ -699,14 +703,8 @@ function triggerSOS(){
   const p=lastKnown();if(p){openSOS(p);return;}
   openSOS(null);$("sh-sub").textContent="Getting your location…";
   oneFix(fix=>{if($("share").hidden||!$("share").classList.contains("sos"))return;openSOS(fix);});}
-(function(){const b=()=>$("sosbtn");let tm=null;
-  const start=e=>{e.preventDefault();b().classList.add("hold");tm=setTimeout(()=>{b().classList.remove("hold");tm=null;triggerSOS();},2000);};
-  const cancel=()=>{if(tm){clearTimeout(tm);tm=null;b().classList.remove("hold");
-      const n=$("sosbtn");n.title="Press and hold for 2 seconds";}};
-  document.addEventListener("DOMContentLoaded",()=>{},{once:true});
-  setTimeout(()=>{const el=b();el.addEventListener("pointerdown",start);["pointerup","pointerleave","pointercancel"].forEach(ev=>el.addEventListener(ev,cancel));
-    el.addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&!e.repeat&&!tm)start(e);});el.addEventListener("keyup",e=>{if(e.key==="Enter"||e.key===" ")cancel();});
-    el.addEventListener("contextmenu",e=>e.preventDefault());},0);})();
+// Tap SOS to open the SOS screen. Nothing is sent until the user presses Send.
+setTimeout(()=>{const el=$("sosbtn");el.addEventListener("click",triggerSOS);},0);
 
 // ---------- "I've arrived" message ----------
 function arrivedMessage(t){const end=t.points[t.points.length-1];const at=end.lat.toFixed(5)+","+end.lon.toFixed(5);
@@ -714,7 +712,7 @@ function arrivedMessage(t){const end=t.points[t.points.length-1];const at=end.la
 function openArrived(t){const text=arrivedMessage(t);SH.text=text;$("share").classList.remove("sos");$("sh-call").hidden=true;
   $("sh-title").textContent="Tell family you arrived";$("sh-sub").textContent="So they know you're safe, and where you ended up.";
   $("sh-msg").textContent=text;$("sh-len").textContent=text.length+" characters, about "+Math.ceil(text.length/153)+" SMS";
-  $("sh-sms").href=CONTACTS.length?smsHref(text):"sms:?&body="+encodeURIComponent(text);$("sh-wa").href="https://wa.me/?text="+encodeURIComponent(text);
+  $("sh-sms").href=smsHref(text);$("sh-wa").href="https://wa.me/?text="+encodeURIComponent(text);
   $("sh-to").textContent=CONTACTS.length?"To: "+contactNames():"";$("sh-copy").textContent="Copy message";$("share").hidden=false;}
 
 // ---------- low battery ----------
