@@ -99,6 +99,16 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .helpbtn[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
 .ad{border:1px dashed var(--line);border-radius:12px;padding:12px;display:flex;gap:12px;align-items:flex-start;background:var(--bg)}
 .ad img{width:64px;height:64px;object-fit:cover;border-radius:8px;flex:none}
+a.adlink{display:block;text-decoration:none;color:inherit;border-radius:12px}
+.adslot{position:relative}
+.adclose{position:absolute;top:6px;right:6px;z-index:2;width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--muted);font-size:1rem;line-height:1;cursor:pointer;display:grid;place-items:center}
+.adclose:hover{color:var(--fg)}
+a.adlink:active .ad{transform:scale(.99)}
+.ad .adgo{color:var(--accent);font-weight:600;font-size:.9rem}
+.ad.adbanner{flex-direction:column;gap:0;padding:0;overflow:hidden;border-style:solid}
+.ad.adbanner img{width:100%;height:auto;max-height:260px;object-fit:cover;border-radius:0;display:block}
+.ad.adbanner .adtxt{padding:8px 12px 10px;flex-direction:row;flex-wrap:wrap;align-items:baseline;gap:4px 10px}
+.ad.adbanner .adtxt b{font-size:.9rem}
 .ad .adtxt{display:flex;flex-direction:column;gap:4px;min-width:0}
 .ad .adlbl{font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
 .ad b{font-size:.95rem;overflow-wrap:anywhere}
@@ -644,18 +654,30 @@ function loadAds(){
 function eligibleAds(){const cc=userCountry(),today=new Date().toISOString().slice(0,10);
   return ADS.filter(a=>a&&a.active!==false&&a.title&&(!a.start||a.start<=today)&&(!a.end||a.end>=today)&&
     (!a.countries||!a.countries.length||a.countries.includes("ALL")||(cc&&a.countries.map(x=>String(x).toUpperCase()).includes(cc))));}
+function safeLink(u){return u&&/^(https:\/\/|mailto:|tel:)/.test(u)?u:"";}
+// Premium users never see adverts. The Premium purchase (coming later) sets this flag.
+function isPremium(){try{return localStorage.getItem("wayback.premium.v1")==="active";}catch(e){return false;}}
+let ADS_HIDDEN=false;try{ADS_HIDDEN=sessionStorage.getItem("wayback.adshidden")==="1";}catch(e){}
+function hideAds(){ADS_HIDDEN=true;try{sessionStorage.setItem("wayback.adshidden","1");}catch(e){}renderAds();}
 function renderAd(slotId){
-  const slot=$(slotId);if(!slot)return;slot.innerHTML="";const list=eligibleAds();if(!list.length)return;
+  const slot=$(slotId);if(!slot)return;slot.innerHTML="";if(ADS_HIDDEN||isPremium())return;const list=eligibleAds();if(!list.length)return;
   if(!(slotId in adPick)||!list.includes(adPick[slotId]))adPick[slotId]=list[Math.floor(Math.random()*list.length)];
-  const a=adPick[slotId];const card=document.createElement("div");card.className="ad";
-  if(a.image&&/^https:\/\//.test(a.image)){const im=document.createElement("img");im.src=a.image;im.alt="";im.onerror=()=>im.remove();card.appendChild(im);}
+  const a=adPick[slotId];const img=a.image&&/^https:\/\//.test(a.image)?a.image:"";
+  const banner=a.style==="banner"&&!!img;const link=safeLink(a.link);
+  const card=document.createElement("div");card.className="ad"+(banner?" adbanner":"");
   const tx=document.createElement("div");tx.className="adtxt";
   const l=document.createElement("span");l.className="adlbl";l.textContent="Sponsored";tx.appendChild(l);
   const b=document.createElement("b");b.textContent=a.title;tx.appendChild(b);
-  if(a.text){const p=document.createElement("p");p.textContent=a.text;tx.appendChild(p);}
-  if(a.phone){const p=document.createElement("p");p.textContent="Call: "+a.phone;p.style.userSelect="text";tx.appendChild(p);}
-  if(a.link&&/^(https:\/\/|mailto:)/.test(a.link)){const k=document.createElement("a");k.href=a.link;k.target="_blank";k.rel="noopener";k.textContent=a.button||"Learn more";tx.appendChild(k);}
-  card.appendChild(tx);slot.appendChild(card);}
+  if(!banner&&a.text){const p=document.createElement("p");p.textContent=a.text;tx.appendChild(p);}
+  if(!banner&&a.phone){const p=document.createElement("p");p.textContent="Call: "+a.phone;p.style.userSelect="text";tx.appendChild(p);}
+  if(link){const k=document.createElement("span");k.className="adgo";k.textContent=(a.button||"Learn more")+" →";tx.appendChild(k);}
+  if(img){const im=document.createElement("img");im.src=img;im.alt=banner?a.title:"";
+    im.onerror=()=>{im.remove();if(banner){card.classList.remove("adbanner");if(a.text){const p=document.createElement("p");p.textContent=a.text;tx.insertBefore(p,tx.children[2]||null);}}};
+    card.appendChild(im);}
+  card.appendChild(tx);
+  const x=document.createElement("button");x.type="button";x.className="adclose";x.textContent="✕";x.setAttribute("aria-label","Hide adverts");x.title="Hide adverts";x.onclick=hideAds;slot.appendChild(x);
+  if(link){const w=document.createElement("a");w.className="adlink";w.href=link;w.target="_blank";w.rel="noopener sponsored";w.setAttribute("aria-label","Sponsored: "+a.title+". "+(a.button||"Learn more"));w.appendChild(card);slot.appendChild(w);}
+  else slot.appendChild(card);}
 function renderAds(){renderAd("ad-trips");renderAd("ad-replay");}
 
 // ---------- emergency contacts ----------
