@@ -256,13 +256,13 @@ a.adlink:active .ad{transform:scale(.99)}
       <section>
         <h2>Contact us</h2>
         <p class="note">Questions, problems or ideas for WakaBack? Email us and we'll reply.</p>
-        <span class="mail" id="mail1">waybacksupport@gmail.com</span>
-        <div class="row"><button class="btn sm" id="copymail" type="button">Copy email</button><a class="btn sm" href="mailto:waybacksupport@gmail.com?subject=WakaBack%20help">Email us</a></div>
+        <span class="mail" id="mail1">wakabackapp@gmail.com</span>
+        <div class="row"><button class="btn sm" id="copymail" type="button">Copy email</button><a class="btn sm" href="mailto:wakabackapp@gmail.com?subject=WakaBack%20help">Email us</a></div>
       </section>
       <section>
         <h2>Advertise on WakaBack</h2>
         <p class="note">Put your shop, church, event or business in front of WakaBack users in the countries you choose. Email us with “Advert” in the subject, and tell us your business, the country and how long you want the ad to run.</p>
-        <div class="row"><a class="btn sm" href="mailto:waybacksupport@gmail.com?subject=Advert%20on%20WakaBack">Ask about adverts</a></div>
+        <div class="row"><a class="btn sm" href="mailto:wakabackapp@gmail.com?subject=Advert%20on%20WakaBack">Ask about adverts</a></div>
       </section>
       <section>
         <h2>Emergency contacts</h2>
@@ -1064,7 +1064,7 @@ $("bk-voice").onclick=()=>{VOICE.on=!VOICE.on;try{localStorage.setItem(VKEY,VOIC
   if(VOICE.on)say("Voice directions on.",true);else{try{TTS?TTS.stop():window.speechSynthesis&&window.speechSynthesis.cancel();}catch(e){}}};
 renderVoiceBtn();
 $("helpbtn").onclick=()=>setTab(S.tab==="help"?"trips":"help");
-$("copymail").onclick=()=>copyText("waybacksupport@gmail.com",$("mail1"),{set textContent(v){$("copymail").textContent=v==="Copy code"?"Copy email":v;}});
+$("copymail").onclick=()=>copyText("wakabackapp@gmail.com",$("mail1"),{set textContent(v){$("copymail").textContent=v==="Copy code"?"Copy email":v;}});
 loadAds();
 $("bk-dir").onclick=e=>{const b=e.target.closest("button");if(b)setDir(b.dataset.d);};
 function addShared(t,n){S.trips.unshift(t);S.selId=t.id;saveTrips();n.className="note";n.textContent="Added “"+t.name+"”. Tap Replay to see it, or Go there again to follow it.";renderAll();}
