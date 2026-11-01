@@ -8,7 +8,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<title>WayBack</title>
+<title>WakaBack</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
 <style>
@@ -139,16 +139,22 @@ a.adlink:active .ad{transform:scale(.99)}
 .contacts{display:flex;flex-direction:column;gap:8px}
 .contacts .crow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:8px}
 .contacts input{border:1px solid var(--line);border-radius:8px;padding:8px;background:var(--bg);min-width:0;width:100%}
+.vtoggle{display:flex;align-items:center;gap:8px;font-weight:600;cursor:pointer;flex-wrap:wrap}
+.vtoggle input{width:20px;height:20px;accent-color:var(--warn)}
+.vtoggle small{font-weight:400;color:var(--muted)}
+.vbanner{flex-direction:row;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.vbanner .rec{display:inline-flex;align-items:center;gap:8px}
+.vbanner .rec::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--warn);animation:pulse 1.2s infinite}
 .banner{border-radius:10px;padding:10px 12px;background:var(--warn-bg);color:var(--warn);font-weight:600;display:flex;flex-direction:column;gap:8px}
 @media (max-width:420px){.stats{grid-template-columns:repeat(2,1fr)}.brand p{display:none}}
-@media (prefers-reduced-motion:reduce){.dot.live{animation:none}}
+@media (prefers-reduced-motion:reduce){.dot.live,.vbanner .rec::before{animation:none}}
 </style>
 <style>html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}img{max-width:100%}body{margin:0;-webkit-tap-highlight-color:transparent;user-select:none}textarea,input,.code{user-select:text}</style>
 </head>
 <body>
 <div class="app">
   <header>
-    <div class="brand"><h1>Way<span>Back</span></h1><p>Record once. Replay it. Find your way back.</p></div>
+    <div class="brand"><h1>Waka<span>Back</span></h1><p>Record once. Replay it. Find your way back.</p></div>
     <div class="hdr-right"><div class="chip" id="chip">No trip selected</div><button class="helpbtn" id="helpbtn" aria-pressed="false">Help</button><button class="sosbtn" id="sosbtn" type="button" aria-label="SOS. Opens a help message with your location"><i></i><span>SOS</span></button></div>
   </header>
 
@@ -178,6 +184,8 @@ a.adlink:active .ad{transform:scale(.99)}
         <div class="stat"><b id="r-stops">0</b><small>Stops</small></div>
         <div class="stat"><b id="r-fix">±— m</b><small>GPS accuracy</small></div>
       </div>
+      <label class="vtoggle" id="recvoicewrap"><input type="checkbox" id="recvoice"> 🎙️ Also record voice <small>Saved on this phone only</small></label>
+      <div class="banner vbanner" id="recvoiceon" hidden><span class="rec">Recording voice</span><span id="recvoicesize"></span></div>
       <div class="row">
         <button class="btn primary" id="recstart">Start recording</button>
         <button class="btn" id="recdemo">Try a demo walk</button>
@@ -185,7 +193,7 @@ a.adlink:active .ad{transform:scale(.99)}
         <button class="btn" id="recshare" hidden>Share where I am</button>
       </div>
       <div class="banner" id="recbatt" hidden><span>Battery low. Send your location to family before your phone switches off.</span><div class="row"><button class="btn sm" id="recbattsend" type="button">Send my location now</button></div></div>
-      <p class="note" id="recnote">Walk your route with the screen on. WayBack saves a point every few metres and marks the places you stop for a minute or more. Everything stays on your phone.</p>
+      <p class="note" id="recnote">Walk your route with the screen on. WakaBack saves a point every few metres and marks the places you stop for a minute or more. Everything stays on your phone.</p>
     </div>
 
     <div class="view" id="v-trips" hidden>
@@ -193,7 +201,7 @@ a.adlink:active .ad{transform:scale(.99)}
       <div id="triplist" style="display:flex;flex-direction:column;gap:10px"></div>
       <div style="display:flex;flex-direction:column;gap:8px">
         <span class="eyebrow">Open a shared trip</span>
-        <textarea id="importcode" placeholder="Paste a WayBack trip code here" aria-label="Trip code"></textarea>
+        <textarea id="importcode" placeholder="Paste a WakaBack trip code here" aria-label="Trip code"></textarea>
         <div class="row"><button class="btn sm" id="importbtn">Add trip</button><span class="note" id="importnote"></span></div>
       </div>
     </div>
@@ -215,6 +223,7 @@ a.adlink:active .ad{transform:scale(.99)}
             <button data-s="1" aria-pressed="false">1×</button><button data-s="10" aria-pressed="false">10×</button><button data-s="30" aria-pressed="true">30×</button><button data-s="60" aria-pressed="false">60×</button>
           </div>
         </div>
+        <div class="row" id="rp-voicerow" hidden style="align-items:center"><button class="btn sm" id="rp-voice" type="button" aria-pressed="true">🎙️ Trip voice: On</button><span class="note" id="rp-voicenote"></span></div>
         <div><span class="eyebrow">Where you stopped</span><div class="stops" id="rp-stops"></div></div>
         <div class="adslot" id="ad-replay"></div>
       </div>
@@ -225,7 +234,7 @@ a.adlink:active .ad{transform:scale(.99)}
       <div id="bk-body" hidden style="display:flex;flex-direction:column;gap:12px">
         <span class="eyebrow" id="bk-name"></span>
         <div class="seg" id="bk-dir" role="group" aria-label="Direction"><button data-d="back" aria-pressed="true">Take me back</button><button data-d="there" aria-pressed="false">Go there again</button></div>
-        <div class="guide" id="bk-guide"><p class="big" id="bk-instr">Ready when you are</p><span class="note" id="bk-sub">WayBack will lead you along the path you took, in reverse.</span></div>
+        <div class="guide" id="bk-guide"><p class="big" id="bk-instr">Ready when you are</p><span class="note" id="bk-sub">WakaBack will lead you along the path you took, in reverse.</span></div>
         <div class="bar"><i id="bk-bar"></i></div>
         <div class="stats">
           <div class="stat"><b id="bk-left">—</b><small id="bk-leftlbl">To the start</small></div>
@@ -238,7 +247,7 @@ a.adlink:active .ad{transform:scale(.99)}
           <button class="btn" id="bk-demo">Demo walk back</button>
           <button class="btn danger" id="bk-end" hidden>End guidance</button>
         </div>
-        <div class="row" style="align-items:center"><button class="btn sm" id="bk-voice" type="button" aria-pressed="true">🔊 Voice directions: On</button></div>
+        <div class="row" style="align-items:center"><button class="btn sm" id="bk-voice" type="button" aria-pressed="true">🔊 Voice directions: On</button><button class="btn sm" id="bk-tripvoice" type="button" aria-pressed="false" hidden>🎙️ Trip recording: Off</button></div>
         <div class="row" id="bk-arrived" hidden><button class="btn sm primary" id="bk-tellfam" type="button">Tell family I arrived</button></div>
         <p class="note" id="bk-note">Works without data or signal. The route is already on your phone.</p>
       </div>
@@ -246,43 +255,43 @@ a.adlink:active .ad{transform:scale(.99)}
     <div class="view help" id="v-help" hidden>
       <section>
         <h2>Contact us</h2>
-        <p class="note">Questions, problems or ideas for WayBack? Email us and we'll reply.</p>
+        <p class="note">Questions, problems or ideas for WakaBack? Email us and we'll reply.</p>
         <span class="mail" id="mail1">waybacksupport@gmail.com</span>
-        <div class="row"><button class="btn sm" id="copymail" type="button">Copy email</button><a class="btn sm" href="mailto:waybacksupport@gmail.com?subject=WayBack%20help">Email us</a></div>
+        <div class="row"><button class="btn sm" id="copymail" type="button">Copy email</button><a class="btn sm" href="mailto:waybacksupport@gmail.com?subject=WakaBack%20help">Email us</a></div>
       </section>
       <section>
-        <h2>Advertise on WayBack</h2>
-        <p class="note">Put your shop, church, event or business in front of WayBack users in the countries you choose. Email us with “Advert” in the subject, and tell us your business, the country and how long you want the ad to run.</p>
-        <div class="row"><a class="btn sm" href="mailto:waybacksupport@gmail.com?subject=Advert%20on%20WayBack">Ask about adverts</a></div>
+        <h2>Advertise on WakaBack</h2>
+        <p class="note">Put your shop, church, event or business in front of WakaBack users in the countries you choose. Email us with “Advert” in the subject, and tell us your business, the country and how long you want the ad to run.</p>
+        <div class="row"><a class="btn sm" href="mailto:waybacksupport@gmail.com?subject=Advert%20on%20WakaBack">Ask about adverts</a></div>
       </section>
       <section>
         <h2>Emergency contacts</h2>
-        <p class="note">The people WayBack texts when you hold SOS or tell family you've arrived. SMS works without data.</p>
+        <p class="note">The people WakaBack texts when you hold SOS or tell family you've arrived. SMS works without data.</p>
         <div class="contacts" id="contacts"></div>
         <div class="row"><button class="btn sm primary" id="savecontacts" type="button">Save contacts</button><span class="note" id="contactsnote"></span></div>
       </section>
       <section>
         <h2>Keep recording reliable</h2>
-        <p class="note">WayBack keeps recording with the screen off and without data or network. Some phones (Tecno, Infinix, itel, Xiaomi and others) close apps to save battery, so change one setting once to make sure that never happens.</p>
+        <p class="note">WakaBack keeps recording with the screen off and without data or network. Some phones (Tecno, Infinix, itel, Xiaomi and others) close apps to save battery, so change one setting once to make sure that never happens.</p>
         <div class="eyebrow">Choose your phone</div>
         <div class="brands" id="hb-brands"></div>
         <ol class="steps" id="hb-steps"></ol>
         <p class="tip" id="hb-tip"></p>
-        <div class="row"><button class="btn sm primary" id="helpopenset" type="button" hidden>Open WayBack settings</button><button class="btn sm" id="showbattery" type="button" hidden>Show full guide</button></div>
+        <div class="row"><button class="btn sm primary" id="helpopenset" type="button" hidden>Open WakaBack settings</button><button class="btn sm" id="showbattery" type="button" hidden>Show full guide</button></div>
       </section>
       <section>
         <h2>Your privacy</h2>
         <p class="note">Your trips are saved on this phone only. Deleting the app or losing the phone deletes them.</p>
         <a href="https://sabigo2026-cell.github.io/wayback-privacy/" target="_blank" rel="noopener">Read the privacy policy</a>
       </section>
-      <p class="note">WayBack 1.0 · Sabigo Connect Technologies</p>
+      <p class="note">WakaBack 1.0 · Sabigo Connect Technologies</p>
     </div>
   </section>
 </div>
 
 <div class="sheet" id="battery" hidden role="dialog" aria-modal="true" aria-labelledby="bt-title">
   <div class="card">
-    <h2 id="bt-title">Keep WayBack recording with the screen off</h2>
+    <h2 id="bt-title">Keep WakaBack recording with the screen off</h2>
     <p class="note" id="bt-intro"></p>
     <div id="bt-native">
       <div class="eyebrow" style="margin-bottom:6px">Your phone</div>
@@ -291,7 +300,7 @@ a.adlink:active .ad{transform:scale(.99)}
     <ol class="steps" id="bt-steps"></ol>
     <p class="tip" id="bt-tip"></p>
     <div class="row">
-      <button class="btn primary" id="bt-open" type="button">Open WayBack settings</button>
+      <button class="btn primary" id="bt-open" type="button">Open WakaBack settings</button>
       <button class="btn" id="bt-done" type="button">I've done it</button>
       <button class="btn" id="bt-later" type="button">Later</button>
     </div>
@@ -313,6 +322,22 @@ a.adlink:active .ad{transform:scale(.99)}
     <p class="note" id="sh-to"></p>
     <p class="tip">SMS works without data, using network signal and airtime. WhatsApp needs data. In danger, call 112 first.</p>
     <div class="row"><button class="btn" id="sh-close" type="button">Close</button></div>
+  </div>
+</div>
+
+<div class="sheet" id="vconsent" hidden role="dialog" aria-modal="true" aria-labelledby="vc-title">
+  <div class="card">
+    <h2 id="vc-title">Before you record voice</h2>
+    <ol class="steps">
+      <li><b>Tell the people around you</b> that you're recording. Recording people without telling them can be against the law.</li>
+      <li>A red <b>Recording voice</b> sign stays on screen the whole time.</li>
+      <li>The recording is saved <b>only on this phone</b>. It is not uploaded or sent anywhere.</li>
+      <li>Keep WakaBack <b>open on screen</b> while recording voice.</li>
+    </ol>
+    <div class="row">
+      <button class="btn primary" id="vc-ok" type="button">Record voice</button>
+      <button class="btn" id="vc-no" type="button">Route only</button>
+    </div>
   </div>
 </div>
 
@@ -387,7 +412,7 @@ function sampleTrip(){
 }
 
 // ---------- state ----------
-const S={dir:"back",tab:"record",trips:[],selId:null,zoom:1,rec:null,play:null,back:null,editId:null,confirmId:null,shareId:null};
+const S={voiceReplay:true,tripVoice:false,dir:"back",tab:"record",trips:[],selId:null,zoom:1,rec:null,play:null,back:null,editId:null,confirmId:null,shareId:null};
 S.trips=loadTrips()||[sampleTrip()];
 if(!S.trips.length)S.trips=[sampleTrip()];
 S.selId=S.trips[0].id;
@@ -406,12 +431,12 @@ const BG=NATIVE?window.Capacitor.registerPlugin("BackgroundGeolocation"):null;
 function startNativeGPS(onFix,onErr,purpose){
   let id=null,stopped=false;
   BG.addWatcher({
-    backgroundTitle:"WayBack is using your location",
+    backgroundTitle:"WakaBack is using your location",
     backgroundMessage:purpose==="back"?"Guiding you back along your route.":"Recording your route.",
     requestPermissions:true,stale:false,distanceFilter:3
   },(loc,err)=>{
     if(err){
-      if(err.code==="NOT_AUTHORIZED"){onErr("WayBack needs location access. Open Settings, allow location for WayBack, then try again.");
+      if(err.code==="NOT_AUTHORIZED"){onErr("WakaBack needs location access. Open Settings, allow location for WakaBack, then try again.");
         try{BG.openSettings();}catch(e){}}
       else onErr("Can't get a GPS fix yet. Step outside or wait a moment.");
       return;}
@@ -424,7 +449,7 @@ function startGPS(onFix,onErr,purpose){
   if(!("geolocation" in navigator)){onErr("This browser can't read your location.");return null;}
   let id=null;
   try{id=navigator.geolocation.watchPosition(pos=>{const c=pos.coords;onFix({lat:c.latitude,lon:c.longitude,t:pos.timestamp||Date.now(),acc:c.accuracy});},
-    e=>{onErr(e.code===1?"Location is blocked here. Open WayBack in your phone browser and allow location, or use the demo.":"Can't get a GPS fix yet. Step outside or wait a moment.");},
+    e=>{onErr(e.code===1?"Location is blocked here. Open WakaBack in your phone browser and allow location, or use the demo.":"Can't get a GPS fix yet. Step outside or wait a moment.");},
     {enableHighAccuracy:true,maximumAge:2000,timeout:20000});}catch(e){onErr("Location is blocked here. Use the demo to see how it works.");return null;}
   return {stop:()=>{try{navigator.geolocation.clearWatch(id);}catch(e){}}};
 }
@@ -433,23 +458,25 @@ function startSim(fixes,onFix,onDone){let i=0;const tick=setInterval(()=>{if(i>=
 // ---------- recording ----------
 function recStart(demo){
   if(S.rec)return;
-  const B=newBuilder();S.rec={B,demo,cur:null,acc:null,startReal:Date.now(),src:null};
-  const onFix=p=>{if(!S.rec)return;if(p.acc&&p.acc>50){S.rec.acc=p.acc;renderRec();return;}S.rec.cur=p;S.rec.acc=p.acc;feed(B,p);snapRec(false);checkBattery();renderRec();draw();};
+  const B=newBuilder();S.rec={B,demo,cur:null,acc:null,startReal:Date.now(),src:null,voice:null};
+  if(!demo&&$("recvoice").checked)S.rec.voice=voiceStart(msg=>{$("recnote").textContent=msg;$("recnote").className="note warn";if(S.rec)S.rec.voice=null;renderRec();});
+  const onFix=p=>{if(!S.rec)return;if(p.acc&&p.acc>50){S.rec.acc=p.acc;renderRec();return;}S.rec.cur=p;S.rec.acc=p.acc;feed(B,p);if(/^Can't get a GPS fix/.test($("recnote").textContent)){$("recnote").className="note";$("recnote").textContent="GPS found. Recording your route.";}snapRec(false);checkBattery();renderRec();draw();};
   if(demo){const shift=S.trips.length*0.0011;const o={lat:ORIGIN.lat+shift,lon:ORIGIN.lon-shift};const path=wpToLatLon(o,[[0,0],[60,80],[70,210],[190,260],[230,390],[330,430]]);
     S.rec.src=startSim(genFixes(path,{t0:Date.now(),pauses:{3:120000}}),onFix,()=>{$("recnote").textContent="Demo walk finished. Tap “Stop and save” to keep it.";});}
-  else S.rec.src=startGPS(onFix,msg=>{$("recnote").textContent=msg;$("recnote").className="note warn";if(!S.rec||!S.rec.B.points.length){recCancel();}});
+  else S.rec.src=startGPS(onFix,msg=>{if(!S.rec)return;$("recnote").textContent=msg;$("recnote").className="note warn";if(/blocked|can't read/i.test(msg)&&!S.rec.B.points.length){recCancel();}});
   wake(true);S.zoom=1;setTab("record");renderRec();
 }
-function recCancel(){if(!S.rec)return;clearSnap();S.rec.src&&S.rec.src.stop();S.rec=null;wake(false);renderRec();draw();}
+function recCancel(){if(!S.rec)return;clearSnap();{const v=voiceStop(S.rec.voice);if(v)vDelete(v.id);}S.rec.src&&S.rec.src.stop();S.rec=null;wake(false);renderRec();draw();}
 function recStop(){
-  if(!S.rec)return;const {B,demo}=S.rec;const wasShared=!!S.rec.shared;S.rec.src&&S.rec.src.stop();const r=finish(B);S.rec=null;wake(false);clearSnap();$("recbatt").hidden=true;
-  if(r.points.length<2){$("recnote").textContent="Not enough of the route was recorded to save. Try walking a little further.";renderRec();draw();return;}
-  const t={id:"t"+Date.now(),name:(demo?"Demo walk, ":"Trip, ")+fmtDate(r.points[0].t),created:r.points[0].t,...r};
+  if(!S.rec)return;const {B,demo}=S.rec;const wasShared=!!S.rec.shared;const audio=voiceStop(S.rec.voice);S.rec.src&&S.rec.src.stop();const r=finish(B);S.rec=null;wake(false);clearSnap();$("recbatt").hidden=true;
+  if(r.points.length<2){if(audio)vDelete(audio.id);$("recnote").textContent="Not enough of the route was recorded to save. Try walking a little further.";renderRec();draw();return;}
+  const t={id:"t"+Date.now(),name:(demo?"Demo walk, ":"Trip, ")+fmtDate(r.points[0].t),created:r.points[0].t,...r};if(audio)t.audio=audio;
   S.trips.unshift(t);S.selId=t.id;saveTrips();$("recnote").className="note";$("recnote").textContent="Saved. Find it in Trips.";setTab("trips");
   if(!demo&&(wasShared||CONTACTS.length))openArrived(t);
 }
 function renderRec(){
-  const on=!!S.rec;$("recstart").hidden=on;$("recdemo").hidden=on;$("recstop").hidden=!on;$("recshare").hidden=!(on&&S.rec.B.points.length>=2);$("recdot").className="dot"+(on?" live":"");
+  const on=!!S.rec;$("recvoicewrap").hidden=on;{const v=on&&S.rec.voice;$("recvoiceon").hidden=!(v&&v.ok);if(v&&v.ok)$("recvoicesize").textContent=fmtBytes(v.bytes)+" · keep WakaBack open";}
+  $("recstart").hidden=on;$("recdemo").hidden=on;$("recstop").hidden=!on;$("recshare").hidden=!(on&&S.rec.B.points.length>=2);$("recdot").className="dot"+(on?" live":"");
   if(!on){$("recstatus").textContent="Ready to record";return;}
   const B=S.rec.B,pts=B.points;$("recstatus").textContent=S.rec.demo?"Recording · demo walk":"Recording · GPS";
   const el=pts.length?(S.rec.cur.t-pts[0].t):0;$("r-time").textContent=fmtDur(el);$("r-dist").textContent=fmtDist(pathLen(pts));
@@ -457,13 +484,107 @@ function renderRec(){
   if(!S.rec.demo&&!pts.length){$("recnote").className="note";$("recnote").textContent="Waiting for GPS…";}
 }
 
+// ---------- voice recordings ----------
+// Saved in this phone's database (IndexedDB) in one-minute parts, so a crash loses at most a few seconds.
+const SEG_MS=window.__WB_SEG||60000;
+const VDB={db:null};
+function vdb(){if(VDB.db)return Promise.resolve(VDB.db);return new Promise((ok,no)=>{try{const r=indexedDB.open("wayback-voice",1);
+  r.onupgradeneeded=()=>{const d=r.result;if(!d.objectStoreNames.contains("chunks"))d.createObjectStore("chunks",{keyPath:"k"});};
+  r.onsuccess=()=>{VDB.db=r.result;ok(VDB.db);};r.onerror=()=>no(r.error);}catch(e){no(e);}});}
+function vPut(rec){return vdb().then(d=>new Promise((ok,no)=>{const tx=d.transaction("chunks","readwrite");tx.objectStore("chunks").put(rec);tx.oncomplete=()=>ok();tx.onerror=()=>no(tx.error);}));}
+function vRange(id){return IDBKeyRange.bound(id+":",id+":\uffff");}
+function vGetAll(id){return vdb().then(d=>new Promise((ok,no)=>{const q=d.transaction("chunks").objectStore("chunks").getAll(vRange(id));q.onsuccess=()=>ok(q.result||[]);q.onerror=()=>no(q.error);}));}
+function vDelete(id){return vdb().then(d=>new Promise(ok=>{const tx=d.transaction("chunks","readwrite");tx.objectStore("chunks").delete(vRange(id));tx.oncomplete=()=>ok();tx.onerror=()=>ok();})).catch(()=>{});}
+const pad5=n=>String(n).padStart(5,"0");
+function fmtBytes(b){return b<1e6?Math.max(1,Math.round(b/1e3))+" KB":(b/1e6).toFixed(1)+" MB";}
+function pickMime(){const c=["audio/webm;codecs=opus","audio/webm","audio/mp4;codecs=mp4a.40.2","audio/mp4","audio/ogg;codecs=opus"];
+  try{for(const m of c)if(window.MediaRecorder&&MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(m))return m;}catch(e){}return "";}
+function voiceStart(onFail){
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||!window.MediaRecorder||!window.indexedDB){onFail("This phone or browser can't record voice. WakaBack is recording the route only.");return null;}
+  const V={id:"v"+Date.now(),start:null,mime:pickMime(),seg:-1,chunk:0,bytes:0,stream:null,mr:null,stopped:false,timer:null,ok:false};
+  try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist().catch(()=>{});}catch(e){}
+  navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}}).then(stream=>{
+    if(V.stopped){stream.getTracks().forEach(t=>t.stop());return;}
+    V.stream=stream;V.ok=true;V.start=Date.now();newSeg(V);V.timer=setInterval(()=>{if(!V.stopped)newSeg(V);},SEG_MS);snapRec(true);renderRec();
+  }).catch(e=>{V.stopped=true;onFail(e&&(e.name==="NotAllowedError"||e.name==="SecurityError")?"The microphone is blocked. Allow the microphone for WakaBack in your phone's Settings. Recording the route only.":"The microphone couldn't start. Recording the route only.");});
+  return V;}
+function newSeg(V){
+  if(V.mr&&V.mr.state!=="inactive"){try{V.mr.stop();}catch(e){}}
+  V.seg++;V.chunk=0;const seg=V.seg,segStart=Date.now();let mr;
+  try{mr=new MediaRecorder(V.stream,V.mime?{mimeType:V.mime,audioBitsPerSecond:24000}:{audioBitsPerSecond:24000});}catch(e){mr=new MediaRecorder(V.stream);}
+  if(!V.mime)V.mime=mr.mimeType||"audio/webm";const mime=V.mime;let c=0;
+  mr.ondataavailable=e=>{if(!e.data||!e.data.size)return;const n=c++;V.bytes+=e.data.size;
+    vPut({k:V.id+":"+pad5(seg)+":"+pad5(n),seg,c:n,start:segStart,mime,blob:e.data}).catch(()=>{});if(S.rec)renderRec();};
+  V.mr=mr;mr.start(5000);}
+function voiceStop(V){if(!V||V.stopped)return null;V.stopped=true;clearInterval(V.timer);
+  try{V.mr&&V.mr.state!=="inactive"&&V.mr.stop();}catch(e){}
+  setTimeout(()=>{try{V.stream&&V.stream.getTracks().forEach(t=>t.stop());}catch(e){}},400);
+  return V.ok?{id:V.id,start:V.start,dur:Date.now()-V.start,mime:V.mime,bytes:V.bytes}:null;}
+
+// Player shared by Replay and Go there again.
+const VP={tripId:null,segs:null,el:null,cur:-1,loading:null,want:null,missing:{}};
+function voicePlayerFor(t){
+  if(!t||!t.audio)return Promise.resolve(null);
+  if(VP.tripId===t.id&&VP.segs)return Promise.resolve(VP);
+  if(VP.tripId===t.id&&VP.loading)return VP.loading;
+  voiceRelease();VP.tripId=t.id;
+  VP.loading=vGetAll(t.audio.id).then(rows=>{if(VP.tripId!==t.id)return null;const by={};
+    rows.forEach(r=>{(by[r.seg]=by[r.seg]||{start:r.start,mime:r.mime,parts:[]}).parts.push(r);});
+    VP.segs=Object.keys(by).map(Number).sort((a,b)=>a-b).map(k=>{const g=by[k];g.parts.sort((a,b)=>a.c-b.c);
+      return {start:g.start,url:URL.createObjectURL(new Blob(g.parts.map(x=>x.blob),{type:(g.mime||"audio/webm").split(";")[0]}))};});
+    if(!VP.el){VP.el=new Audio();VP.el.preload="auto";VP.el.addEventListener("loadedmetadata",()=>{if(VP.want!=null){try{VP.el.currentTime=VP.want;}catch(e){}VP.want=null;}});}
+    VP.loading=null;if(!VP.segs.length){VP.missing[t.id]=true;renderReplay();return null;}return VP;})
+    .catch(()=>{VP.loading=null;VP.missing[t.id]=true;return null;});
+  return VP.loading;}
+function voiceRelease(){if(VP.el){try{VP.el.pause();VP.el.removeAttribute("src");}catch(e){}}
+  (VP.segs||[]).forEach(x=>{try{URL.revokeObjectURL(x.url);}catch(e){}});VP.segs=null;VP.cur=-1;VP.tripId=null;VP.loading=null;}
+function voicePause(){if(VP.el&&!VP.el.paused)VP.el.pause();}
+// Play the recording at trip time tMs (milliseconds), or pause it.
+function voiceSync(tMs,shouldPlay){
+  if(!VP.segs||!VP.el)return;const el=VP.el;
+  if(!shouldPlay){voicePause();return;}
+  let k=-1;for(let i=0;i<VP.segs.length;i++){if(VP.segs[i].start<=tMs)k=i;else break;}
+  if(k<0||tMs-VP.segs[k].start>SEG_MS+3000){voicePause();return;}
+  const off=(tMs-VP.segs[k].start)/1000;
+  if(VP.cur!==k){VP.cur=k;VP.want=off;el.src=VP.segs[k].url;}
+  else if(Math.abs(el.currentTime-off)>0.8&&!el.ended){try{el.currentTime=off;}catch(e){}}
+  if(el.paused&&!el.ended){const pr=el.play();if(pr&&pr.catch)pr.catch(()=>{});}}
+function voiceNow(){if(!VP.segs||VP.cur<0||!VP.el)return null;return VP.segs[VP.cur].start+VP.el.currentTime*1000;}
+
+// Replay: the recording plays in step with the moving dot, at 1× only.
+function replayVoice(){
+  const t=sel(),p=S.play;const has=!!(t&&t.audio);$("rp-voicerow").hidden=!has;
+  if(!has){if(VP.tripId&&!(S.back&&S.tripVoice))voicePause();return;}
+  const vb=$("rp-voice");vb.textContent=S.voiceReplay?"🎙️ Trip voice: On":"🔇 Trip voice: Off";vb.setAttribute("aria-pressed",String(S.voiceReplay));
+  const note=$("rp-voicenote");
+  if(VP.missing[t.id])note.textContent="The voice recording for this trip wasn't found on this phone.";
+  else note.textContent=S.voiceReplay&&p&&p.speed!==1?"Voice plays at 1×. Tap 1× to hear it.":"";
+  const want=!!(p&&p.playing&&S.voiceReplay&&p.speed===1&&S.tab==="replay");
+  if(want&&!(VP.tripId===t.id&&VP.segs)){voicePlayerFor(t).then(()=>{if(S.play&&S.play.playing)voiceSync(S.play.t,true);});return;}
+  if(VP.tripId===t.id)voiceSync(p?p.t:0,want);}
+
+// Go there again: optionally plays the recording by place, and pauses it whenever a direction is spoken.
+const DUCK={n:0,resume:false};
+function duckStart(){DUCK.n++;if(VP.el&&!VP.el.paused){VP.el.pause();DUCK.resume=true;}}
+function duckEnd(){DUCK.n=Math.max(0,DUCK.n-1);if(DUCK.n)return;if(DUCK.resume){DUCK.resume=false;
+  if(S.back&&S.tripVoice&&!S.back.arrived&&VP.el&&!VP.el.ended){const pr=VP.el.play();if(pr&&pr.catch)pr.catch(()=>{});}}}
+function guideVoice(b){
+  const t=sel();const ok=!!(b&&t&&t.audio&&b.G.dir==="there"&&S.tripVoice&&!b.arrived&&b.g&&b.g.off<=25&&b.G.total>=5);
+  if(!ok){if(VP.tripId===(t&&t.id))voicePause();return;}
+  if(DUCK.n)return;
+  if(!(VP.tripId===t.id&&VP.segs)){voicePlayerFor(t).then(()=>guideVoice(S.back));return;}
+  const G=b.G,a=G.path[b.g.i],c=G.path[b.g.i+1]||a;const tAt=a.t+(c.t-a.t)*(b.g.f||0);
+  const now=voiceNow();const el=VP.el;
+  const target=(now===null||el.paused&&!el.ended||Math.abs(now-tAt)>20000)?tAt:now+(el.ended?1500:0);
+  voiceSync(target,true);}
+
 // ---------- replay ----------
 function interp(pts,t){if(t<=pts[0].t)return {...pts[0],i:0};const n=pts.length;if(t>=pts[n-1].t)return {...pts[n-1],i:n-1};
   let lo=0,hi=n-1;while(hi-lo>1){const m=(lo+hi)>>1;if(pts[m].t<=t)lo=m;else hi=m;}const a=pts[lo],b=pts[hi],f=(t-a.t)/((b.t-a.t)||1);
   return {lat:a.lat+(b.lat-a.lat)*f,lon:a.lon+(b.lon-a.lon)*f,t,i:lo};}
 function replayInit(){const t=sel();if(!t){S.play=null;return;}
   if(!S.play||S.play.id!==t.id){const cum=[0];for(let i=1;i<t.points.length;i++)cum.push(cum[i-1]+dist(t.points[i-1],t.points[i]));
-    S.play={id:t.id,t:t.points[0].t,playing:false,speed:S.play?S.play.speed:30,cum,raf:0,lastReal:0};}}
+    S.play={id:t.id,t:t.points[0].t,playing:false,speed:t.audio?1:(S.play?S.play.speed:30),cum,raf:0,lastReal:0};}}
 function playPos(){const t=sel(),p=S.play;return interp(t.points,p.t);}
 function coveredDist(pos){const t=sel(),p=S.play;return p.cum[pos.i]+dist(t.points[pos.i],pos);}
 function loop(ts){const p=S.play,t=sel();if(!p||!p.playing||!t)return;const dt=p.lastReal?ts-p.lastReal:0;p.lastReal=ts;
@@ -473,7 +594,7 @@ function loop(ts){const p=S.play,t=sel();if(!p||!p.playing||!t)return;const dt=p
   renderReplay();draw();if(p.playing)p.raf=requestAnimationFrame(loop);}
 function togglePlay(){const p=S.play,t=sel();if(!p)return;const end=t.points[t.points.length-1].t;if(!p.playing&&p.t>=end)p.t=t.points[0].t;
   p.playing=!p.playing;p.lastReal=0;if(p.playing)p.raf=requestAnimationFrame(loop);else cancelAnimationFrame(p.raf);renderReplay();}
-function pausePlay(){if(S.play&&S.play.playing){S.play.playing=false;cancelAnimationFrame(S.play.raf);}}
+function pausePlay(){if(S.play&&S.play.playing){S.play.playing=false;cancelAnimationFrame(S.play.raf);}if(!(S.back&&S.tripVoice))voicePause();}
 function renderReplay(){
   const t=sel();$("rp-empty").hidden=!!t;$("rp-body").hidden=!t;if(!t)return;replayInit();const p=S.play,pos=playPos();
   const t0=t.points[0].t,t1=t.points[t.points.length-1].t,total=p.cum[p.cum.length-1];
@@ -484,6 +605,7 @@ function renderReplay(){
   const box=$("rp-stops");if(box.dataset.for!==t.id){box.dataset.for=t.id;box.innerHTML="";
     if(!t.stops.length){const e=document.createElement("span");e.className="note";e.textContent="No stops of a minute or more.";box.appendChild(e);}
     t.stops.forEach((s,k)=>{const b=document.createElement("button");b.textContent="Stop "+(k+1)+" · "+fmtMin(s.to-s.from)+" at "+fmtClock(s.from);b.onclick=()=>{pausePlay();S.play.t=s.from;renderReplay();draw();};box.appendChild(b);});}
+  replayVoice();
 }
 
 // ---------- guided return ----------
@@ -498,23 +620,24 @@ function guide(G,pos){
   const near=G.P.inv({x:A.x+(B.x-A.x)*best.f,y:A.y+(B.y-A.y)*best.f});
   let turn=null;for(let j=best.i+1;j<G.path.length-1;j++){const b1=bearing(G.path[j-1],G.path[j]),b2=bearing(G.path[j],G.path[j+1]);let dl=((b2-b1+540)%360)-180;
     if(Math.abs(dl)>=35){turn={d:G.cum[j]-along,dir:dl>0?"right":"left",mag:Math.abs(dl),j};break;}}
-  return {off:best.d,remain,along,near,turn};}
+  return {off:best.d,remain,along,near,turn,i:best.i,f:best.f};}
 function turnText(tn){const verb=tn.mag>=120?"Make a sharp turn":tn.mag>=60?"Turn":"Bear";return verb+" "+tn.dir;}
 function backStart(demo){
   const G=backPrepare();if(!G)return;if(S.back&&S.back.src)S.back.src.stop();
   S.back={G,demo,trail:[],cur:null,startT:null,src:null,arrived:false,lastT:null};
-  const onFix=p=>{const b=S.back;if(!b||b.arrived)return;if(p.acc&&p.acc>50)return;b.cur=p;if(b.startT===null)b.startT=p.t;b.lastT=p.t;b.trail.push(p);b.g=guide(b.G,p);if(b.g.remain<15&&b.g.off<25){b.arrived=true;b.src&&b.src.stop();wake(false);}voiceUpdate(b);checkBattery();renderBack();draw();};
+  const onFix=p=>{const b=S.back;if(!b||b.arrived)return;if(p.acc&&p.acc>50)return;if(/^Can't get a GPS fix/.test($("bk-note").textContent)){$("bk-note").className="note";$("bk-note").textContent="GPS found. Guiding you now.";}b.cur=p;if(b.startT===null)b.startT=p.t;b.lastT=p.t;b.trail.push(p);b.g=guide(b.G,p);if(b.g.remain<15&&b.g.off<25){b.arrived=true;b.src&&b.src.stop();wake(false);}voiceUpdate(b);guideVoice(b);checkBattery();renderBack();draw();};
   if(demo){S.back.src=startSim(genFixes(G.path,{t0:Date.now(),speed:1.4,dev:[0.42,0.58,48]}),onFix);}
-  else S.back.src=startGPS(onFix,msg=>{$("bk-note").textContent=msg;$("bk-note").className="note warn";if(S.back&&!S.back.trail.length)backEnd();},"back");
+  else S.back.src=startGPS(onFix,msg=>{if(!S.back)return;$("bk-note").textContent=msg;$("bk-note").className="note warn";if(/blocked|can't read/i.test(msg)&&!S.back.trail.length)backEnd();},"back");
   wake(true);S.zoom=1;setTab("back");renderBack();}
-function backEnd(){if(S.back&&S.back.src)S.back.src.stop();S.back=null;wake(false);renderBack();draw();}
+function backEnd(){if(S.back&&S.back.src)S.back.src.stop();voicePause();S.back=null;wake(false);renderBack();draw();}
 function renderBack(){
-  const t=sel();$("bk-empty").hidden=!!t;$("bk-body").hidden=!t;if(!t)return;const there=S.dir==="there";$("bk-name").textContent=(there?"Again to the end of: ":"Back along: ")+t.name;
+  const t=sel();$("bk-empty").hidden=!!t;$("bk-body").hidden=!t;if(!t)return;
+  {const tv=$("bk-tripvoice");tv.hidden=!(t.audio&&S.dir==="there"&&pathLen(t.points)>=5);tv.textContent=S.tripVoice?"🎙️ Trip recording: On":"🎙️ Trip recording: Off";tv.setAttribute("aria-pressed",String(!!S.tripVoice));}const there=S.dir==="there";$("bk-name").textContent=(there?"Again to the end of: ":"Back along: ")+t.name;
   [...$("bk-dir").children].forEach(x=>x.setAttribute("aria-pressed",String(x.dataset.d===S.dir)));$("bk-leftlbl").textContent=there?"To the destination":"To the start";
   const b=S.back&&S.back.G.id===t.id?S.back:null;const active=!!b&&!b.arrived;
   $("bk-start").hidden=active;$("bk-demo").hidden=active;$("bk-end").hidden=!b;$("bk-end").textContent=b&&b.arrived?"Done":"End guidance";
   const guideEl=$("bk-guide");guideEl.classList.remove("off");
-  if(!b){$("bk-instr").textContent="Ready when you are";$("bk-sub").textContent=there?"Start where this trip started. WayBack leads you along the same path to where it ended.":"Start where this trip ended. WayBack leads you along the same path, in reverse.";
+  if(!b){$("bk-instr").textContent="Ready when you are";$("bk-sub").textContent=there?"Start where this trip started. WakaBack leads you along the same path to where it ended.":"Start where this trip ended. WakaBack leads you along the same path, in reverse.";
     $("bk-bar").style.width="0";["bk-left","bk-off","bk-src"].forEach(i=>$(i).textContent="—");$("bk-time").textContent="0:00:00";return;}
   $("bk-src").textContent=b.demo?"Demo":"GPS";
   if(!b.g){$("bk-instr").textContent="Finding you…";$("bk-sub").textContent="Waiting for your first position.";return;}
@@ -537,8 +660,9 @@ const TTS=NATIVE?window.Capacitor.registerPlugin("TextToSpeech"):null;
 const LANG=(navigator.language&&/^en/i.test(navigator.language))?navigator.language:"en-GB";
 function say(text,flush){
   if(!VOICE.on||!text)return;
-  if(TTS){TTS.speak({text,lang:LANG,rate:1.0,pitch:1.0,volume:1.0,category:"playback",queueStrategy:flush?0:1}).catch(()=>{});return;}
-  try{const ss=window.speechSynthesis;if(!ss)return;if(flush)ss.cancel();const u=new SpeechSynthesisUtterance(text);u.lang=LANG;u.rate=1;ss.speak(u);}catch(e){}
+  let done=false;const end=()=>{if(done)return;done=true;duckEnd();};duckStart();setTimeout(end,9000);
+  if(TTS){TTS.speak({text,lang:LANG,rate:1.0,pitch:1.0,volume:1.0,category:"playback",queueStrategy:flush?0:1}).then(end,end);return;}
+  try{const ss=window.speechSynthesis;if(!ss){end();return;}if(flush)ss.cancel();const u=new SpeechSynthesisUtterance(text);u.lang=LANG;u.rate=1;u.onend=end;u.onerror=end;ss.speak(u);}catch(e){end();}
 }
 function voiceUnlock(){ // browsers only allow speech after a tap
   if(TTS||!VOICE.on)return;try{const u=new SpeechSynthesisUtterance(" ");u.volume=0;window.speechSynthesis.speak(u);}catch(e){}}
@@ -579,7 +703,7 @@ function encodeTrip(t){
 function findCode(text){const m=String(text||"").match(/WB2\.[A-Za-z0-9_-]*\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*|WB1\.[A-Za-z0-9+\/=]+/);return m?m[0]:null;}
 function decodeTrip(input){
   const code=findCode(String(input||"").replace(/\s+/g,""));
-  if(!code)throw new Error("No WayBack route found. Paste the whole message you received.");
+  if(!code)throw new Error("No WakaBack route found. Paste the whole message you received.");
   if(code.startsWith("WB1.")){let o;try{o=JSON.parse(decodeURIComponent(escape(atob(code.slice(4)))));}catch(e){throw new Error("The route looks incomplete. Copy the whole message and try again.");}
     if(!o.p||o.p.length<2)throw new Error("This route has no path in it.");
     return {id:"t"+Date.now(),name:o.n||"Shared trip",created:o.c,shared:true,points:o.p.map(a=>({lat:a[0]/1e5,lon:a[1]/1e5,t:o.c+a[2]*1000})),stops:(o.s||[]).map(a=>({lat:a[0]/1e5,lon:a[1]/1e5,from:o.c+a[2]*1000,to:o.c+a[3]*1000}))};}
@@ -593,15 +717,15 @@ function decodeTrip(input){
 function shareMessage(t,live){
   const code=encodeTrip(t);const end=t.points[t.points.length-1];const st=tripStats(t);
   const at=end.lat.toFixed(5)+","+end.lon.toFixed(5);
-  return (live?"I'm sharing my route so far with WayBack.":"My route with WayBack: "+t.name+".")+
+  return (live?"I'm sharing my route so far with WakaBack.":"My route with WakaBack: "+t.name+".")+
     "\n"+(live?"I'm here now":"It ends here")+": https://maps.google.com/?q="+at+" ("+at+")"+
     "\nRoute: "+fmtDist(st.d)+", "+fmtDur(st.dur)+", "+fmtClock(end.t)+
-    "\nFollow it in WayBack: "+SITE+"#t="+code+
-    "\nNo data? Copy this whole message into WayBack > Trips > Open a shared trip.";}
+    "\nFollow it in WakaBack: "+SITE+"#t="+code+
+    "\nNo data? Copy this whole message into WakaBack > Trips > Open a shared trip.";}
 // Share sheet
 const SH={text:"",t:null,live:false};
 function openShare(t,live){$("share").classList.remove("sos");$("sh-call").hidden=true;$("sh-to").textContent="";SH.t=t;SH.live=!!live;SH.text=shareMessage(t,live);$("sh-title").textContent=live?"Share where I am":"Share this route";
-  $("sh-sub").textContent=live?"Sends the route you've recorded so far and where you are now.":"Family and friends can see where you went and follow the same path with WayBack.";
+  $("sh-sub").textContent=live?"Sends the route you've recorded so far and where you are now.":"Family and friends can see where you went and follow the same path with WakaBack.";
   $("sh-msg").textContent=SH.text;$("sh-len").textContent=SH.text.length+" characters, about "+Math.ceil(SH.text.length/153)+" SMS";
   $("sh-sms").href=smsLink([],SH.text);$("sh-wa").href="https://wa.me/?text="+encodeURIComponent(SH.text);
   $("sh-copy").textContent="Copy message";$("share").hidden=false;setTimeout(()=>$("sh-sms").focus(),0);}
@@ -618,14 +742,14 @@ function renderTrips(){
       const r=document.createElement("div");r.className="row";r.append(mk("Save name","btn sm primary",()=>{t.name=inp.value.trim()||t.name;S.editId=null;saveTrips();renderAll();}),mk("Cancel","btn sm",()=>{S.editId=null;renderTrips();}));c.appendChild(r);
       setTimeout(()=>inp.focus(),0);}
     else{const h=document.createElement("h3");h.textContent=t.name;if(t.sample){const g=document.createElement("span");g.className="tag";g.textContent="Sample";h.appendChild(g);}if(t.shared){const g=document.createElement("span");g.className="tag";g.textContent="Shared";h.appendChild(g);}c.appendChild(h);}
-    const m=document.createElement("div");m.className="meta";m.textContent=fmtDate(t.created)+" · "+fmtDist(st.d)+" · "+fmtDur(st.dur)+" · "+st.stops+(st.stops===1?" stop":" stops");c.appendChild(m);
+    const m=document.createElement("div");m.className="meta";m.textContent=(t.audio?"🎙️ ":"")+fmtDate(t.created)+" · "+fmtDist(st.d)+" · "+fmtDur(st.dur)+" · "+st.stops+(st.stops===1?" stop":" stops");c.appendChild(m);
     const r=document.createElement("div");r.className="row";
     r.append(mk("Replay","btn sm primary",()=>{pick(t.id);setTab("replay");}),mk("Take me back","btn sm",()=>{pick(t.id);setDir("back");setTab("back");}),mk("Go there again","btn sm",()=>{pick(t.id);setDir("there");setTab("back");}),
       mk("Share","btn sm",()=>{pick(t.id);openShare(t,false);}),...(t.shared?[dirLink(t)]:[]),mk("Rename","btn sm",()=>{S.editId=t.id;renderTrips();}),
       mk("Delete","btn sm danger",()=>{S.confirmId=t.id;renderTrips();}));
     c.appendChild(r);
-    if(S.confirmId===t.id){const q=document.createElement("div");q.className="row";q.style.alignItems="center";const s=document.createElement("span");s.className="note warn";s.textContent="Delete this trip for good?";
-      q.append(s,mk("Delete","btn sm danger",()=>{S.trips=S.trips.filter(x=>x.id!==t.id);if(S.selId===t.id)S.selId=S.trips[0]?S.trips[0].id:null;S.confirmId=null;saveTrips();if(S.back&&S.back.G.id===t.id)backEnd();renderAll();}),mk("Keep","btn sm",()=>{S.confirmId=null;renderTrips();}));c.appendChild(q);}
+    if(S.confirmId===t.id){const q=document.createElement("div");q.className="row";q.style.alignItems="center";const s=document.createElement("span");s.className="note warn";s.textContent=t.audio?"Delete this trip and its voice recording for good?":"Delete this trip for good?";
+      q.append(s,mk("Delete","btn sm danger",()=>{if(t.audio){if(VP.tripId===t.id)voiceRelease();vDelete(t.audio.id);}S.trips=S.trips.filter(x=>x.id!==t.id);if(S.selId===t.id)S.selId=S.trips[0]?S.trips[0].id:null;S.confirmId=null;saveTrips();if(S.back&&S.back.G.id===t.id)backEnd();renderAll();}),mk("Keep","btn sm",()=>{S.confirmId=null;renderTrips();}));c.appendChild(q);}
     c.addEventListener("click",e=>{if(e.target.closest("button,input"))return;pick(t.id);});
     box.appendChild(c);});
   if(!S.trips.length){const e=document.createElement("p");e.className="empty";e.textContent="No trips yet. Record your first one in Record.";box.appendChild(e);}
@@ -640,7 +764,8 @@ function pick(id){if(S.selId!==id){pausePlay();S.play=null;if(S.back&&S.back.G.i
 // Edit that file to add, change or remove adverts. The app keeps the last copy for offline use.
 const ADS_URL="https://sabigo2026-cell.github.io/wayback/ads.json";
 const ADS_KEY="wayback.ads.v1";
-const TZ_CC={"Africa/Lagos":"NG","Africa/Accra":"GH","Africa/Nairobi":"KE","Africa/Johannesburg":"ZA","Africa/Cairo":"EG","Africa/Abidjan":"CI","Africa/Dakar":"SN","Africa/Douala":"CM","Africa/Kampala":"UG","Africa/Dar_es_Salaam":"TZ","Africa/Kigali":"RW","Africa/Addis_Ababa":"ET","Africa/Lome":"TG","Africa/Porto-Novo":"BJ","Africa/Freetown":"SL","Africa/Monrovia":"LR","Africa/Banjul":"GM","Africa/Bamako":"ML","Africa/Ouagadougou":"BF","Africa/Niamey":"NE","Africa/Kinshasa":"CD","Africa/Lusaka":"ZM","Africa/Harare":"ZW","Africa/Casablanca":"MA","Europe/London":"GB","America/New_York":"US","America/Chicago":"US","America/Denver":"US","America/Los_Angeles":"US","America/Toronto":"CA","Asia/Dubai":"AE","Asia/Kolkata":"IN"};
+const TZ_CC={"Europe/Andorra":"AD","Asia/Dubai":"AE","Asia/Kabul":"AF","America/Antigua":"AG","America/Anguilla":"AI","Europe/Tirane":"AL","Asia/Yerevan":"AM","Africa/Luanda":"AO","Antarctica/McMurdo":"AQ","Antarctica/Casey":"AQ","Antarctica/Davis":"AQ","Antarctica/DumontDUrville":"AQ","Antarctica/Mawson":"AQ","Antarctica/Palmer":"AQ","Antarctica/Rothera":"AQ","Antarctica/Syowa":"AQ","Antarctica/Troll":"AQ","Antarctica/Vostok":"AQ","America/Argentina/Buenos_Aires":"AR","America/Argentina/Cordoba":"AR","America/Argentina/Salta":"AR","America/Argentina/Jujuy":"AR","America/Argentina/Tucuman":"AR","America/Argentina/Catamarca":"AR","America/Argentina/La_Rioja":"AR","America/Argentina/San_Juan":"AR","America/Argentina/Mendoza":"AR","America/Argentina/San_Luis":"AR","America/Argentina/Rio_Gallegos":"AR","America/Argentina/Ushuaia":"AR","Pacific/Pago_Pago":"AS","Europe/Vienna":"AT","Australia/Lord_Howe":"AU","Antarctica/Macquarie":"AU","Australia/Hobart":"AU","Australia/Melbourne":"AU","Australia/Sydney":"AU","Australia/Broken_Hill":"AU","Australia/Brisbane":"AU","Australia/Lindeman":"AU","Australia/Adelaide":"AU","Australia/Darwin":"AU","Australia/Perth":"AU","Australia/Eucla":"AU","America/Aruba":"AW","Europe/Mariehamn":"AX","Asia/Baku":"AZ","Europe/Sarajevo":"BA","America/Barbados":"BB","Asia/Dhaka":"BD","Europe/Brussels":"BE","Africa/Ouagadougou":"BF","Europe/Sofia":"BG","Asia/Bahrain":"BH","Africa/Bujumbura":"BI","Africa/Porto-Novo":"BJ","America/St_Barthelemy":"BL","Atlantic/Bermuda":"BM","Asia/Brunei":"BN","America/La_Paz":"BO","America/Kralendijk":"BQ","America/Noronha":"BR","America/Belem":"BR","America/Fortaleza":"BR","America/Recife":"BR","America/Araguaina":"BR","America/Maceio":"BR","America/Bahia":"BR","America/Sao_Paulo":"BR","America/Campo_Grande":"BR","America/Cuiaba":"BR","America/Santarem":"BR","America/Porto_Velho":"BR","America/Boa_Vista":"BR","America/Manaus":"BR","America/Eirunepe":"BR","America/Rio_Branco":"BR","America/Nassau":"BS","Asia/Thimphu":"BT","Africa/Gaborone":"BW","Europe/Minsk":"BY","America/Belize":"BZ","America/St_Johns":"CA","America/Halifax":"CA","America/Glace_Bay":"CA","America/Moncton":"CA","America/Goose_Bay":"CA","America/Blanc-Sablon":"CA","America/Toronto":"CA","America/Iqaluit":"CA","America/Atikokan":"CA","America/Winnipeg":"CA","America/Resolute":"CA","America/Rankin_Inlet":"CA","America/Regina":"CA","America/Swift_Current":"CA","America/Edmonton":"CA","America/Cambridge_Bay":"CA","America/Inuvik":"CA","America/Vancouver":"CA","America/Creston":"CA","America/Dawson_Creek":"CA","America/Fort_Nelson":"CA","America/Whitehorse":"CA","America/Dawson":"CA","Indian/Cocos":"CC","Africa/Kinshasa":"CD","Africa/Lubumbashi":"CD","Africa/Bangui":"CF","Africa/Brazzaville":"CG","Europe/Zurich":"CH","Africa/Abidjan":"CI","Pacific/Rarotonga":"CK","America/Santiago":"CL","America/Coyhaique":"CL","America/Punta_Arenas":"CL","Pacific/Easter":"CL","Africa/Douala":"CM","Asia/Shanghai":"CN","Asia/Urumqi":"CN","America/Bogota":"CO","America/Costa_Rica":"CR","America/Havana":"CU","Atlantic/Cape_Verde":"CV","America/Curacao":"CW","Indian/Christmas":"CX","Asia/Nicosia":"CY","Asia/Famagusta":"CY","Europe/Prague":"CZ","Europe/Berlin":"DE","Europe/Busingen":"DE","Africa/Djibouti":"DJ","Europe/Copenhagen":"DK","America/Dominica":"DM","America/Santo_Domingo":"DO","Africa/Algiers":"DZ","America/Guayaquil":"EC","Pacific/Galapagos":"EC","Europe/Tallinn":"EE","Africa/Cairo":"EG","Africa/El_Aaiun":"EH","Africa/Asmara":"ER","Europe/Madrid":"ES","Africa/Ceuta":"ES","Atlantic/Canary":"ES","Africa/Addis_Ababa":"ET","Europe/Helsinki":"FI","Pacific/Fiji":"FJ","Atlantic/Stanley":"FK","Pacific/Chuuk":"FM","Pacific/Pohnpei":"FM","Pacific/Kosrae":"FM","Atlantic/Faroe":"FO","Europe/Paris":"FR","Africa/Libreville":"GA","Europe/London":"GB","America/Grenada":"GD","Asia/Tbilisi":"GE","America/Cayenne":"GF","Europe/Guernsey":"GG","Africa/Accra":"GH","Europe/Gibraltar":"GI","America/Nuuk":"GL","America/Danmarkshavn":"GL","America/Scoresbysund":"GL","America/Thule":"GL","Africa/Banjul":"GM","Africa/Conakry":"GN","America/Guadeloupe":"GP","Africa/Malabo":"GQ","Europe/Athens":"GR","Atlantic/South_Georgia":"GS","America/Guatemala":"GT","Pacific/Guam":"GU","Africa/Bissau":"GW","America/Guyana":"GY","Asia/Hong_Kong":"HK","America/Tegucigalpa":"HN","Europe/Zagreb":"HR","America/Port-au-Prince":"HT","Europe/Budapest":"HU","Asia/Jakarta":"ID","Asia/Pontianak":"ID","Asia/Makassar":"ID","Asia/Jayapura":"ID","Europe/Dublin":"IE","Asia/Jerusalem":"IL","Europe/Isle_of_Man":"IM","Asia/Kolkata":"IN","Indian/Chagos":"IO","Asia/Baghdad":"IQ","Asia/Tehran":"IR","Atlantic/Reykjavik":"IS","Europe/Rome":"IT","Europe/Jersey":"JE","America/Jamaica":"JM","Asia/Amman":"JO","Asia/Tokyo":"JP","Africa/Nairobi":"KE","Asia/Bishkek":"KG","Asia/Phnom_Penh":"KH","Pacific/Tarawa":"KI","Pacific/Kanton":"KI","Pacific/Kiritimati":"KI","Indian/Comoro":"KM","America/St_Kitts":"KN","Asia/Pyongyang":"KP","Asia/Seoul":"KR","Asia/Kuwait":"KW","America/Cayman":"KY","Asia/Almaty":"KZ","Asia/Qyzylorda":"KZ","Asia/Qostanay":"KZ","Asia/Aqtobe":"KZ","Asia/Aqtau":"KZ","Asia/Atyrau":"KZ","Asia/Oral":"KZ","Asia/Vientiane":"LA","Asia/Beirut":"LB","America/St_Lucia":"LC","Europe/Vaduz":"LI","Asia/Colombo":"LK","Africa/Monrovia":"LR","Africa/Maseru":"LS","Europe/Vilnius":"LT","Europe/Luxembourg":"LU","Europe/Riga":"LV","Africa/Tripoli":"LY","Africa/Casablanca":"MA","Europe/Monaco":"MC","Europe/Chisinau":"MD","Europe/Podgorica":"ME","America/Marigot":"MF","Indian/Antananarivo":"MG","Pacific/Majuro":"MH","Pacific/Kwajalein":"MH","Europe/Skopje":"MK","Africa/Bamako":"ML","Asia/Yangon":"MM","Asia/Ulaanbaatar":"MN","Asia/Hovd":"MN","Asia/Macau":"MO","Pacific/Saipan":"MP","America/Martinique":"MQ","Africa/Nouakchott":"MR","America/Montserrat":"MS","Europe/Malta":"MT","Indian/Mauritius":"MU","Indian/Maldives":"MV","Africa/Blantyre":"MW","America/Mexico_City":"MX","America/Cancun":"MX","America/Merida":"MX","America/Monterrey":"MX","America/Matamoros":"MX","America/Chihuahua":"MX","America/Ciudad_Juarez":"MX","America/Ojinaga":"MX","America/Mazatlan":"MX","America/Bahia_Banderas":"MX","America/Hermosillo":"MX","America/Tijuana":"MX","Asia/Kuala_Lumpur":"MY","Asia/Kuching":"MY","Africa/Maputo":"MZ","Africa/Windhoek":"NA","Pacific/Noumea":"NC","Africa/Niamey":"NE","Pacific/Norfolk":"NF","Africa/Lagos":"NG","America/Managua":"NI","Europe/Amsterdam":"NL","Europe/Oslo":"NO","Asia/Kathmandu":"NP","Pacific/Nauru":"NR","Pacific/Niue":"NU","Pacific/Auckland":"NZ","Pacific/Chatham":"NZ","Asia/Muscat":"OM","America/Panama":"PA","America/Lima":"PE","Pacific/Tahiti":"PF","Pacific/Marquesas":"PF","Pacific/Gambier":"PF","Pacific/Port_Moresby":"PG","Pacific/Bougainville":"PG","Asia/Manila":"PH","Asia/Karachi":"PK","Europe/Warsaw":"PL","America/Miquelon":"PM","Pacific/Pitcairn":"PN","America/Puerto_Rico":"PR","Asia/Gaza":"PS","Asia/Hebron":"PS","Europe/Lisbon":"PT","Atlantic/Madeira":"PT","Atlantic/Azores":"PT","Pacific/Palau":"PW","America/Asuncion":"PY","Asia/Qatar":"QA","Indian/Reunion":"RE","Europe/Bucharest":"RO","Europe/Belgrade":"RS","Europe/Kaliningrad":"RU","Europe/Moscow":"RU","Europe/Simferopol":"UA","Europe/Kirov":"RU","Europe/Volgograd":"RU","Europe/Astrakhan":"RU","Europe/Saratov":"RU","Europe/Ulyanovsk":"RU","Europe/Samara":"RU","Asia/Yekaterinburg":"RU","Asia/Omsk":"RU","Asia/Novosibirsk":"RU","Asia/Barnaul":"RU","Asia/Tomsk":"RU","Asia/Novokuznetsk":"RU","Asia/Krasnoyarsk":"RU","Asia/Irkutsk":"RU","Asia/Chita":"RU","Asia/Yakutsk":"RU","Asia/Khandyga":"RU","Asia/Vladivostok":"RU","Asia/Ust-Nera":"RU","Asia/Magadan":"RU","Asia/Sakhalin":"RU","Asia/Srednekolymsk":"RU","Asia/Kamchatka":"RU","Asia/Anadyr":"RU","Africa/Kigali":"RW","Asia/Riyadh":"SA","Pacific/Guadalcanal":"SB","Indian/Mahe":"SC","Africa/Khartoum":"SD","Europe/Stockholm":"SE","Asia/Singapore":"SG","Atlantic/St_Helena":"SH","Europe/Ljubljana":"SI","Arctic/Longyearbyen":"SJ","Europe/Bratislava":"SK","Africa/Freetown":"SL","Europe/San_Marino":"SM","Africa/Dakar":"SN","Africa/Mogadishu":"SO","America/Paramaribo":"SR","Africa/Juba":"SS","Africa/Sao_Tome":"ST","America/El_Salvador":"SV","America/Lower_Princes":"SX","Asia/Damascus":"SY","Africa/Mbabane":"SZ","America/Grand_Turk":"TC","Africa/Ndjamena":"TD","Indian/Kerguelen":"TF","Africa/Lome":"TG","Asia/Bangkok":"TH","Asia/Dushanbe":"TJ","Pacific/Fakaofo":"TK","Asia/Dili":"TL","Asia/Ashgabat":"TM","Africa/Tunis":"TN","Pacific/Tongatapu":"TO","Europe/Istanbul":"TR","America/Port_of_Spain":"TT","Pacific/Funafuti":"TV","Asia/Taipei":"TW","Africa/Dar_es_Salaam":"TZ","Europe/Kyiv":"UA","Africa/Kampala":"UG","Pacific/Midway":"UM","Pacific/Wake":"UM","America/New_York":"US","America/Detroit":"US","America/Kentucky/Louisville":"US","America/Kentucky/Monticello":"US","America/Indiana/Indianapolis":"US","America/Indiana/Vincennes":"US","America/Indiana/Winamac":"US","America/Indiana/Marengo":"US","America/Indiana/Petersburg":"US","America/Indiana/Vevay":"US","America/Chicago":"US","America/Indiana/Tell_City":"US","America/Indiana/Knox":"US","America/Menominee":"US","America/North_Dakota/Center":"US","America/North_Dakota/New_Salem":"US","America/North_Dakota/Beulah":"US","America/Denver":"US","America/Boise":"US","America/Phoenix":"US","America/Los_Angeles":"US","America/Anchorage":"US","America/Juneau":"US","America/Sitka":"US","America/Metlakatla":"US","America/Yakutat":"US","America/Nome":"US","America/Adak":"US","Pacific/Honolulu":"US","America/Montevideo":"UY","Asia/Samarkand":"UZ","Asia/Tashkent":"UZ","Europe/Vatican":"VA","America/St_Vincent":"VC","America/Caracas":"VE","America/Tortola":"VG","America/St_Thomas":"VI","Asia/Ho_Chi_Minh":"VN","Pacific/Efate":"VU","Pacific/Wallis":"WF","Pacific/Apia":"WS","Asia/Aden":"YE","Indian/Mayotte":"YT","Africa/Johannesburg":"ZA","Africa/Lusaka":"ZM","Africa/Harare":"ZW","Asia/Calcutta":"IN","Asia/Katmandu":"NP","Asia/Saigon":"VN","Asia/Rangoon":"MM","Africa/Asmera":"ER","Atlantic/Faeroe":"FO","America/Buenos_Aires":"AR","Europe/Kiev":"UA","Pacific/Truk":"FM","Pacific/Ponape":"FM","Asia/Ulan_Bator":"MN","Africa/Timbuktu":"ML"}; // every time zone → country
+const AD_REGIONS={"AFRICA":["AO","BF","BI","BJ","BW","CD","CF","CG","CI","CM","CV","DJ","DZ","EG","EH","ER","ES","ET","GA","GH","GM","GN","GQ","GW","KE","KM","LR","LS","LY","MA","MG","ML","MR","MU","MW","MZ","NA","NE","NG","RE","RW","SC","SD","SH","SL","SN","SO","SS","ST","SZ","TD","TG","TN","TZ","UG","YT","ZA","ZM","ZW"],"WEST_AFRICA":["BF","BJ","CI","CV","GH","GM","GN","GW","LR","ML","MR","NE","NG","SL","SN","TG"],"EUROPE":["AD","AL","AT","AX","BA","BE","BG","BY","CH","CZ","DE","DK","EE","ES","FI","FR","GB","GG","GI","GR","HR","HU","IE","IM","IS","IT","JE","LI","LT","LU","LV","MC","MD","ME","MK","MT","NL","NO","PL","PT","RO","RS","RU","SE","SI","SK","SM","TR","UA","VA"],"AMERICAS":["AG","AI","AR","AW","BB","BL","BO","BQ","BR","BS","BZ","CA","CL","CO","CR","CU","CW","DM","DO","EC","GD","GF","GL","GP","GT","GY","HN","HT","JM","KN","KY","LC","MF","MQ","MS","MX","NI","PA","PE","PM","PR","PY","SR","SV","SX","TC","TT","US","UY","VC","VE","VG","VI"],"ASIA":["AE","AF","AM","AZ","BD","BH","BN","BT","CN","CY","GE","HK","ID","IL","IN","IQ","IR","JO","JP","KG","KH","KP","KR","KW","KZ","LA","LB","LK","MM","MN","MO","MY","NP","OM","PH","PK","PS","QA","RU","SA","SG","SY","TH","TJ","TL","TM","TW","UZ","VN","YE"],"OCEANIA":["AS","AU","CK","CL","EC","FJ","FM","GU","KI","MH","MP","NC","NF","NR","NU","NZ","PF","PG","PN","PW","SB","TK","TO","TV","UM","US","VU","WF","WS"]};
 function userCountry(){
   try{const tz=Intl.DateTimeFormat().resolvedOptions().timeZone;if(TZ_CC[tz])return TZ_CC[tz];}catch(e){}
   try{const m=(navigator.language||"").match(/-([A-Za-z]{2})$/);if(m)return m[1].toUpperCase();}catch(e){}
@@ -653,7 +778,9 @@ function loadAds(){
     if(!j||!Array.isArray(j.ads))return;ADS=j.ads;adPick={};try{localStorage.setItem(ADS_KEY,JSON.stringify(ADS));}catch(e){}renderAds();}).catch(()=>{});}
 function eligibleAds(){const cc=userCountry(),today=new Date().toISOString().slice(0,10);
   return ADS.filter(a=>a&&a.active!==false&&a.title&&(!a.start||a.start<=today)&&(!a.end||a.end>=today)&&
-    (!a.countries||!a.countries.length||a.countries.includes("ALL")||(cc&&a.countries.map(x=>String(x).toUpperCase()).includes(cc))));}
+    adForCountry(a.countries,cc));}
+function adForCountry(list,cc){if(!list||!list.length)return true;const L=list.map(x=>String(x).toUpperCase());if(L.includes("ALL"))return true;if(!cc)return false;
+  return L.some(x=>x===cc||(AD_REGIONS[x]&&AD_REGIONS[x].includes(cc)));}
 function safeLink(u){return u&&/^(https:\/\/|mailto:|tel:)/.test(u)?u:"";}
 // Premium users never see adverts. The Premium purchase (coming later) sets this flag.
 function isPremium(){try{return localStorage.getItem("wayback.premium.v1")==="active";}catch(e){return false;}}
@@ -714,20 +841,20 @@ function lastTripPoint(){ // end of the most recent real trip in the last 12 hou
   return Date.now()-e.t<12*3600*1000?{...e,fromTrip:true}:null;}
 function findMeLink(p){const a={lat:p.lat,lon:p.lon,t:p.t||Date.now()};return SITE+"#t="+encodeTrip({name:"SOS location "+fmtClock(a.t),created:a.t,points:[a,{...a,t:a.t+1000}],stops:[]});}
 function sosMessage(p,state){
-  let m="SOS from WayBack: I NEED HELP.";
+  let m="SOS from WakaBack: I NEED HELP.";
   if(p){const at=p.lat.toFixed(5)+","+p.lon.toFixed(5);
-    m+=(p.fromTrip?"\nMy last known location (from my last WayBack trip, "+fmtClock(p.t)+"): ":"\nMy location: ")+"https://maps.google.com/?q="+at+" ("+at+")"+(p.acc&&!p.fromTrip?" accurate to about "+Math.round(p.acc)+" m, "+fmtClock(p.t||Date.now()):"")+".";}
+    m+=(p.fromTrip?"\nMy last known location (from my last WakaBack trip, "+fmtClock(p.t)+"): ":"\nMy location: ")+"https://maps.google.com/?q="+at+" ("+at+")"+(p.acc&&!p.fromTrip?" accurate to about "+Math.round(p.acc)+" m, "+fmtClock(p.t||Date.now()):"")+".";}
   else m+=state==="finding"?"\n(Finding my location…)":"\nI couldn't get my GPS location.";
   if(S.rec&&S.rec.B.points.length>=2){const B=S.rec.B;const pts=B.points.concat(p&&!p.fromTrip?[{lat:p.lat,lon:p.lon,t:p.t||Date.now()}]:[]);
-    m+="\nFollow my route to me with WayBack: "+SITE+"#t="+encodeTrip({name:"SOS route "+fmtClock(Date.now()),created:pts[0].t,points:pts,stops:B.stops});}
-  else if(p)m+="\nFind me with WayBack: "+findMeLink(p);
+    m+="\nFollow my route to me with WakaBack: "+SITE+"#t="+encodeTrip({name:"SOS route "+fmtClock(Date.now()),created:pts[0].t,points:pts,stops:B.stops});}
+  else if(p)m+="\nFind me with WakaBack: "+findMeLink(p);
   return m+"\nPlease call me. If you can't reach me, call 112.";}
 function openSOS(p,state){
   const text=sosMessage(p,state);SH.text=text;
   $("share").classList.add("sos");$("sh-title").textContent="Send SOS";
   let sub=CONTACTS.length?"Tap Send by SMS, then press Send in your messages app.":"Add emergency contacts in Help so SOS goes straight to them. For now, pick who to send it to.";
   if(state==="finding")sub="Finding your location… You can already send, but waiting a few seconds adds where you are.";
-  else if(state==="denied")sub="Location is blocked. Allow location for WayBack (or this website) in your phone's Settings, then tap SOS again. You can still send this message.";
+  else if(state==="denied")sub="Location is blocked. Allow location for WakaBack (or this website) in your phone's Settings, then tap SOS again. You can still send this message.";
   else if(p&&p.fromTrip)sub="GPS didn't answer in time, so this uses where your last trip ended. "+sub;
   $("sh-sub").textContent=sub;
   $("sh-msg").textContent=text;$("sh-len").textContent=text.length+" characters, about "+Math.ceil(text.length/153)+" SMS";
@@ -748,7 +875,7 @@ setTimeout(()=>{const el=$("sosbtn");el.addEventListener("click",triggerSOS);},0
 
 // ---------- "I've arrived" message ----------
 function arrivedMessage(t){const end=t.points[t.points.length-1];const at=end.lat.toFixed(5)+","+end.lon.toFixed(5);
-  return "I arrived safely at "+fmtClock(end.t)+" (WayBack).\nI'm here: https://maps.google.com/?q="+at+" ("+at+")\nMy route: "+SITE+"#t="+encodeTrip(t);}
+  return "I arrived safely at "+fmtClock(end.t)+" (WakaBack).\nI'm here: https://maps.google.com/?q="+at+" ("+at+")\nMy route: "+SITE+"#t="+encodeTrip(t);}
 function openArrived(t){const text=arrivedMessage(t);SH.text=text;$("share").classList.remove("sos");$("sh-call").hidden=true;
   $("sh-title").textContent="Tell family you arrived";$("sh-sub").textContent="So they know you're safe, and where you ended up.";
   $("sh-msg").textContent=text;$("sh-len").textContent=text.length+" characters, about "+Math.ceil(text.length/153)+" SMS";
@@ -767,13 +894,14 @@ try{if(navigator.getBattery)navigator.getBattery().then(b=>{const u=()=>{BATT.le
 // ---------- unfinished trip recovery ----------
 const IKEY="wayback.inprogress.v1";let lastSnap=0;
 function snapRec(force){if(!S.rec||S.rec.demo)return;const now=Date.now();if(!force&&now-lastSnap<5000)return;lastSnap=now;
-  const B=S.rec.B;try{localStorage.setItem(IKEY,JSON.stringify({points:B.points.concat(B.last&&B.last!==B.points[B.points.length-1]?[B.last]:[]),stops:B.stops.concat(B.open?[B.open]:[]),shared:!!S.rec.shared}));}catch(e){}}
+  const B=S.rec.B;try{localStorage.setItem(IKEY,JSON.stringify({points:B.points.concat(B.last&&B.last!==B.points[B.points.length-1]?[B.last]:[]),stops:B.stops.concat(B.open?[B.open]:[]),shared:!!S.rec.shared,voice:S.rec.voice&&S.rec.voice.ok?{id:S.rec.voice.id,start:S.rec.voice.start,mime:S.rec.voice.mime}:null}));}catch(e){}}
 window.addEventListener("pagehide",()=>snapRec(true));
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")snapRec(true);});
 function clearSnap(){try{localStorage.removeItem(IKEY);}catch(e){}}
 function recoverSnap(){let o=null;try{o=JSON.parse(localStorage.getItem(IKEY)||"null");}catch(e){}clearSnap();
   if(!o||!Array.isArray(o.points)||o.points.length<2)return null;
   const t={id:"t"+Date.now(),name:"Unfinished trip, "+fmtDate(o.points[0].t)+" (recovered)",created:o.points[0].t,points:o.points,stops:o.stops||[]};
+  if(o.voice&&o.voice.id)t.audio={...o.voice,dur:Math.max(0,o.points[o.points.length-1].t-o.voice.start),bytes:0};
   S.trips.unshift(t);S.selId=t.id;saveTrips();return t;}
 
 // ---------- battery guide ----------
@@ -783,33 +911,33 @@ const BKEY="wayback.battery.v1";
 const IS_ANDROID=/Android/i.test(navigator.userAgent);
 const BRANDS=[
  {id:"transsion",name:"Tecno / Infinix / itel",re:/tecno|infinix|itel/i,steps:[
-  "Open <b>Settings → Apps</b> (or <b>App management</b>) and tap <b>WayBack</b>.",
+  "Open <b>Settings → Apps</b> (or <b>App management</b>) and tap <b>WakaBack</b>.",
   "Tap <b>Battery</b> (or <b>Power</b>) and choose <b>No restrictions</b> or turn on <b>Allow background activity</b>.",
-  "Open the <b>Phone Master</b> app → <b>App launch</b> (or <b>Auto-start management</b>) and allow <b>WayBack</b>.",
+  "Open the <b>Phone Master</b> app → <b>App launch</b> (or <b>Auto-start management</b>) and allow <b>WakaBack</b>.",
   "Make sure <b>Power saving mode</b> is off while you record."],
-  tip:"Also open recent apps, hold WayBack and tap the padlock so the phone doesn't close it."},
+  tip:"Also open recent apps, hold WakaBack and tap the padlock so the phone doesn't close it."},
  {id:"xiaomi",name:"Xiaomi / Redmi / POCO",re:/xiaomi|redmi|poco|\bmi \d|\bM\d{4}/i,steps:[
-  "Open <b>Settings → Apps → Manage apps</b> and tap <b>WayBack</b>.",
+  "Open <b>Settings → Apps → Manage apps</b> and tap <b>WakaBack</b>.",
   "Tap <b>Battery saver</b> and choose <b>No restrictions</b>.",
-  "Back on the WayBack page, turn on <b>Autostart</b>."],
-  tip:"Also open recent apps, press and hold WayBack and tap the padlock."},
+  "Back on the WakaBack page, turn on <b>Autostart</b>."],
+  tip:"Also open recent apps, press and hold WakaBack and tap the padlock."},
  {id:"samsung",name:"Samsung",re:/samsung|\bSM-/i,steps:[
-  "Open <b>Settings → Apps</b> and tap <b>WayBack</b>.",
+  "Open <b>Settings → Apps</b> and tap <b>WakaBack</b>.",
   "Tap <b>Battery</b> and choose <b>Unrestricted</b>.",
-  "In <b>Settings → Battery → Background usage limits</b>, make sure WayBack is not in <b>Sleeping</b> or <b>Deep sleeping apps</b>."],
+  "In <b>Settings → Battery → Background usage limits</b>, make sure WakaBack is not in <b>Sleeping</b> or <b>Deep sleeping apps</b>."],
   tip:""},
  {id:"oppo",name:"Oppo / Realme / OnePlus",re:/oppo|realme|oneplus|\bCPH\d|\bRMX\d/i,steps:[
-  "Open <b>Settings → Apps → App management</b> and tap <b>WayBack</b>.",
+  "Open <b>Settings → Apps → App management</b> and tap <b>WakaBack</b>.",
   "Tap <b>Battery usage</b> and turn on <b>Allow background activity</b>.",
   "Turn on <b>Allow auto launch</b> if you see it."],
-  tip:"Also lock WayBack in recent apps."},
+  tip:"Also lock WakaBack in recent apps."},
  {id:"vivo",name:"Vivo",re:/vivo|\bV\d{4}/i,steps:[
   "Open <b>Settings → Battery → Background power consumption management</b>.",
-  "Tap <b>WayBack</b> and choose <b>Allow</b>.",
-  "In <b>Settings → Apps → WayBack</b>, turn on <b>Auto-start</b> if you see it."],
+  "Tap <b>WakaBack</b> and choose <b>Allow</b>.",
+  "In <b>Settings → Apps → WakaBack</b>, turn on <b>Auto-start</b> if you see it."],
   tip:""},
  {id:"other",name:"Other Android",re:/$^/,steps:[
-  "Open <b>Settings → Apps</b> and tap <b>WayBack</b>.",
+  "Open <b>Settings → Apps</b> and tap <b>WakaBack</b>.",
   "Tap <b>Battery</b> and choose <b>Unrestricted</b> or <b>Don't optimise</b>.",
   "Turn off <b>Battery saver</b> while you record."],
   tip:""}];
@@ -820,23 +948,23 @@ function renderBattery(){
   $("bt-native").hidden=!native;$("bt-open").hidden=!native;
   const steps=$("bt-steps");steps.innerHTML="";
   if(native){
-    $("bt-title").textContent="Keep WayBack recording with the screen off";
-    $("bt-intro").textContent="Many phones close apps in the background to save battery, which can stop your recording halfway. Change these settings once and WayBack keeps working in your pocket. The exact words may differ slightly on your phone.";
+    $("bt-title").textContent="Keep WakaBack recording with the screen off";
+    $("bt-intro").textContent="Many phones close apps in the background to save battery, which can stop your recording halfway. Change these settings once and WakaBack keeps working in your pocket. The exact words may differ slightly on your phone.";
     const box=$("bt-brands");box.innerHTML="";
     BRANDS.forEach(b=>{const x=document.createElement("button");x.type="button";x.textContent=b.name;x.setAttribute("aria-pressed",String(b.id===BT.brand));x.onclick=()=>{BT.brand=b.id;renderBattery();};box.appendChild(x);});
     const b=BRANDS.find(x=>x.id===BT.brand)||BRANDS[BRANDS.length-1];
     b.steps.forEach(t=>{const li=document.createElement("li");li.innerHTML=t;steps.appendChild(li);});
-    $("bt-tip").textContent=b.tip||"Keep the “WayBack is using your location” notification. Swiping it away can stop the recording.";
+    $("bt-tip").textContent=b.tip||"Keep the “WakaBack is using your location” notification. Swiping it away can stop the recording.";
     $("bt-tip").hidden=false;
   }else if(iosApp){
-    $("bt-title").textContent="Let WayBack use your location";
-    $("bt-intro").textContent="When your iPhone asks, choose “Allow While Using App”. Later it may ask again: choose “Change to Always Allow” so WayBack keeps recording with the screen locked.";
-    ["Turn off <b>Low Power Mode</b> while you record, if you can.","If you said no by mistake: <b>Settings → WayBack → Location → Always</b>."].forEach(t=>{const li=document.createElement("li");li.innerHTML=t;steps.appendChild(li);});
+    $("bt-title").textContent="Let WakaBack use your location";
+    $("bt-intro").textContent="When your iPhone asks, choose “Allow While Using App”. Later it may ask again: choose “Change to Always Allow” so WakaBack keeps recording with the screen locked.";
+    ["Turn off <b>Low Power Mode</b> while you record, if you can.","If you said no by mistake: <b>Settings → WakaBack → Location → Always</b>."].forEach(t=>{const li=document.createElement("li");li.innerHTML=t;steps.appendChild(li);});
     $("bt-tip").hidden=true;
   }else{
     $("bt-title").textContent="Keep this screen on";
-    $("bt-intro").textContent="This is the test version of WayBack running in your browser. Browsers pause pages when the screen goes off, so recording only works while WayBack stays open on screen.";
-    ["Tap <b>Allow</b> when your browser asks for your location.","Keep WayBack open and the screen on until you tap <b>Stop and save</b>.","Turn off <b>Battery saver</b> while you record."].forEach(t=>{const li=document.createElement("li");li.innerHTML=t;steps.appendChild(li);});
+    $("bt-intro").textContent="This is the test version of WakaBack running in your browser. Browsers pause pages when the screen goes off, so recording only works while WakaBack stays open on screen.";
+    ["Tap <b>Allow</b> when your browser asks for your location.","Keep WakaBack open and the screen on until you tap <b>Stop and save</b>.","Turn off <b>Battery saver</b> while you record."].forEach(t=>{const li=document.createElement("li");li.innerHTML=t;steps.appendChild(li);});
     $("bt-tip").textContent="The Play Store and App Store versions keep recording with the screen off.";$("bt-tip").hidden=false;
   }
   $("bt-done").textContent=native?"I've done it":"OK";$("bt-later").hidden=!native;
@@ -848,7 +976,7 @@ function batteryDone(){try{return localStorage.getItem(BKEY)==="done";}catch(e){
 function withBatteryCheck(action){if(batteryDone()){action();return;}showBattery(action);}
 
 // ---------- tabs ----------
-function setDir(d){if(S.dir===d)return;S.dir=d;if(S.back)backEnd();renderBack();draw();}
+function setDir(d){if(S.dir===d)return;S.dir=d;voicePause();if(S.back)backEnd();renderBack();draw();}
 function setTab(tab){S.tab=tab;document.querySelectorAll(".tabs button").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.tab===tab)));
   ["record","trips","replay","back","help"].forEach(v=>$("v-"+v).hidden=v!==tab);$("helpbtn").setAttribute("aria-pressed",String(tab==="help"));if(tab!=="replay")pausePlay();renderAll();}
 function renderAll(){renderAds();const t=sel();$("chip").textContent=t?t.name:"No trip selected";renderRec();renderTrips();renderReplay();renderBack();draw();}
@@ -901,8 +1029,13 @@ function draw(){
 
 // ---------- events ----------
 document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
-$("recstart").onclick=()=>{$("recnote").className="note";withBatteryCheck(()=>recStart(false));};
-$("recdemo").onclick=()=>{$("recnote").className="note";$("recnote").textContent="Demo walk running at high speed. It includes a two-minute stop.";recStart(true);};
+const VCKEY="wayback.voiceconsent.v1";let VC_THEN=null;
+function withVoiceConsent(go){if(!$("recvoice").checked){go();return;}let seen=false;try{seen=localStorage.getItem(VCKEY)==="yes";}catch(e){}
+  if(seen){go();return;}VC_THEN=go;$("vconsent").hidden=false;setTimeout(()=>$("vc-ok").focus(),0);}
+$("vc-ok").onclick=()=>{try{localStorage.setItem(VCKEY,"yes");}catch(e){}$("vconsent").hidden=true;const f=VC_THEN;VC_THEN=null;f&&f();};
+$("vc-no").onclick=()=>{$("recvoice").checked=false;$("vconsent").hidden=true;const f=VC_THEN;VC_THEN=null;f&&f();};
+$("recstart").onclick=()=>{$("recnote").className="note";withBatteryCheck(()=>withVoiceConsent(()=>recStart(false)));};
+$("recdemo").onclick=()=>{$("recnote").className="note";$("recnote").textContent="Demo walk running at high speed. It includes a two-minute stop."+($("recvoice").checked?" Voice isn't recorded on demo walks.":"");recStart(true);};
 $("recstop").onclick=recStop;
 $("rp-play").onclick=togglePlay;
 $("rp-speed").onclick=e=>{const b=e.target.closest("button");if(!b||!S.play)return;S.play.speed=+b.dataset.s;renderReplay();};
@@ -910,18 +1043,20 @@ $("rp-scrub").oninput=e=>{const t=sel();if(!t||!S.play)return;pausePlay();const 
 $("bk-start").onclick=()=>{voiceUnlock();$("bk-note").className="note";$("bk-note").textContent="Works without data or signal. The route is already on your phone.";withBatteryCheck(()=>backStart(false));};
 $("bk-demo").onclick=()=>{voiceUnlock();$("bk-note").className="note";$("bk-note").textContent="Demo walk back. Partway along it wanders off the path so you can see the warning.";backStart(true);};
 $("bk-end").onclick=backEnd;
+$("rp-voice").onclick=()=>{S.voiceReplay=!S.voiceReplay;renderReplay();};
+$("bk-tripvoice").onclick=()=>{S.tripVoice=!S.tripVoice;if(!S.tripVoice)voicePause();else if(S.back)guideVoice(S.back);renderBack();};
 $("bt-done").onclick=()=>closeBattery(true);
 $("bt-later").onclick=()=>closeBattery(false);
 $("bt-open").onclick=()=>{try{BG&&BG.openSettings();}catch(e){}};
 $("showbattery").onclick=()=>showBattery(null);
 const HB={brand:/iPhone|iPad/i.test(navigator.userAgent)?"iphone":detectBrand()};
 function renderHelpBattery(){
-  const list=BRANDS.concat([{id:"iphone",name:"iPhone",steps:["Open <b>Settings → WayBack → Location</b> and choose <b>Always</b>.","Make sure <b>Precise Location</b> is on.","Turn off <b>Low Power Mode</b> while you record (Settings → Battery)."],tip:"iPhone keeps WayBack recording once location is set to Always."}]);
+  const list=BRANDS.concat([{id:"iphone",name:"iPhone",steps:["Open <b>Settings → WakaBack → Location</b> and choose <b>Always</b>.","Make sure <b>Precise Location</b> is on.","Turn off <b>Low Power Mode</b> while you record (Settings → Battery)."],tip:"iPhone keeps WakaBack recording once location is set to Always."}]);
   const box=$("hb-brands");box.innerHTML="";
   list.forEach(b=>{const x=document.createElement("button");x.type="button";x.textContent=b.name;x.setAttribute("aria-pressed",String(b.id===HB.brand));x.onclick=()=>{HB.brand=b.id;renderHelpBattery();};box.appendChild(x);});
   const b=list.find(x=>x.id===HB.brand)||list[list.length-2];const ol=$("hb-steps");ol.innerHTML="";
   b.steps.forEach(t=>{const li=document.createElement("li");li.innerHTML=t;ol.appendChild(li);});
-  $("hb-tip").textContent=b.tip||"Keep the “WayBack is using your location” notification while recording. Swiping it away can stop the recording.";}
+  $("hb-tip").textContent=b.tip||"Keep the “WakaBack is using your location” notification while recording. Swiping it away can stop the recording.";}
 renderHelpBattery();
 $("helpopenset").hidden=!(NATIVE&&IS_ANDROID);$("helpopenset").onclick=()=>{try{BG&&BG.openSettings();}catch(e){}};
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("battery").hidden)closeBattery(false);});
@@ -945,7 +1080,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("share").hidden)
 $("sh-copy").onclick=()=>{const b=$("sh-copy");try{navigator.clipboard.writeText(SH.text).then(()=>{b.textContent="Copied";},()=>{selectEl($("sh-msg"));b.textContent="Selected, press copy";});}catch(e){selectEl($("sh-msg"));b.textContent="Selected, press copy";}};
 function selectEl(el){const r=document.createRange();r.selectNodeContents(el);const s=getSelection();s.removeAllRanges();s.addRange(r);}
 // Opened from a shared link (…/wayback/#t=WB2…): add the route automatically,
-// also when WayBack is already open and only the link part changes.
+// also when WakaBack is already open and only the link part changes.
 window.addEventListener("hashchange",()=>{const h=decodeURIComponent(location.hash||"");if(!/^#t=/.test(h))return;const n=$("importnote");
   try{const t=decodeTrip(h.slice(3));const ex=S.trips.find(x=>x.name===t.name&&x.created===t.created);if(ex){S.selId=ex.id;renderAll();}else addShared(t,n);
     n.className="note";n.textContent="Shared route added. Tap Replay to see it, or Go there again to follow it.";setTab("trips");}
@@ -967,10 +1102,10 @@ if(document.fonts&&document.fonts.ready)document.fonts.ready.then(draw);
 if(!NATIVE&&"serviceWorker" in navigator&&(location.protocol==="https:"||location.hostname==="localhost")){
   window.addEventListener("load",()=>{navigator.serviceWorker.register("sw.js").catch(()=>{});});}
 
-// Open on the sample trip in replay so the first view shows what WayBack does
+// Open on the sample trip in replay so the first view shows what WakaBack does
 const RECOVERED=recoverSnap();
 setTab(RECOVERED||S.openShared||S.sharedErr||S.trips.some(t=>!t.sample)?"trips":"replay");
-if(RECOVERED){$("importnote").className="note";$("importnote").textContent="WayBack closed during a recording. Your route so far was saved as “"+RECOVERED.name+"”.";}
+if(RECOVERED){$("importnote").className="note";$("importnote").textContent="WakaBack closed during a recording. Your route so far was saved as “"+RECOVERED.name+"”.";}
 if(S.openShared){$("importnote").className="note";$("importnote").textContent="Shared route added. Tap Replay to see it, or Go there again to follow it.";}
 if(S.sharedErr){$("importnote").className="note warn";$("importnote").textContent=S.sharedErr;}
 })();

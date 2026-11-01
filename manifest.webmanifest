@@ -1,6 +1,6 @@
 {
-  "name": "WayBack",
-  "short_name": "WayBack",
+  "name": "WakaBack",
+  "short_name": "WakaBack",
   "description": "Record a route, replay it, and get guided back the same way.",
   "start_url": "./",
   "scope": "./",
