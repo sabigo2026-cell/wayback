@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1f6b47">
+<meta name="robots" content="noindex">
+<title>WakaBack Live</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Family watch page: map on top, status banner, then listen / replay / directions / notify. */
+:root{--bg:#eef1ec;--surface:#fff;--line:#d3dbd2;--fg:#14241c;--muted:#5b6b62;--accent:#1f6b47;--accent-ink:#fff;--signal:#e9b52a;--warn:#c2402a;--warn-bg:#fbe7e2;--ok-bg:#e3f1e8;
+  --map-bg:#f6f8f3;--map-grid:#e1e7de;--path:#1f6b47;--path-dim:#b9cbbf;--me:#2d6fd6;
+  --f-display:"Bricolage Grotesque","Avenir Next",system-ui,sans-serif;--f-body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;--f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1714;--surface:#16211c;--line:#2a3a32;--fg:#e6eee8;--muted:#97a89e;--accent:#4fbf86;--accent-ink:#06140d;--signal:#f0c445;--warn:#f07a62;--warn-bg:#3a1d17;--ok-bg:#183326;
+  --map-bg:#121c18;--map-grid:#1f2c26;--path:#4fbf86;--path-dim:#2e4a3b;--me:#6aa2ff;color-scheme:dark}}
+*{box-sizing:border-box}
+html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.5}
+.wrap{max-width:720px;margin:0 auto;padding:14px max(14px,env(safe-area-inset-right,0px)) 40px max(14px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:12px}
+header{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+h1{font-family:var(--f-display);font-weight:800;font-size:1.5rem;margin:0;letter-spacing:-.02em}h1 span{color:var(--accent)}
+.pill{font-size:.8rem;font-weight:700;border-radius:999px;padding:3px 10px;white-space:nowrap}
+.pill.live{background:var(--ok-bg);color:var(--accent)}.pill.ended{background:var(--ok-bg);color:var(--accent)}.pill.warn{background:var(--warn-bg);color:var(--warn)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.who{font-family:var(--f-display);font-weight:800;font-size:1.35rem;margin:0;line-height:1.2;text-wrap:balance}
+.banner{border-radius:12px;padding:12px 14px;font-weight:600;display:flex;flex-direction:column;gap:4px}
+.banner.ok{background:var(--ok-bg);color:var(--accent)}.banner.warn{background:var(--warn-bg);color:var(--warn)}
+.banner small{font-weight:400;color:inherit;opacity:.9}
+.mapwrap{position:relative;height:min(52vh,420px);border-radius:14px;overflow:hidden;border:1px solid var(--line);background:var(--map-bg)}
+canvas{display:block;width:100%;height:100%}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat b{display:block;font-family:var(--f-mono);font-weight:500;font-variant-numeric:tabular-nums}.stat small{color:var(--muted);font-size:.78rem}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--fg);padding:10px 14px;border-radius:10px;font:inherit;font-weight:600;cursor:pointer;text-decoration:none;display:inline-block}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn:disabled{opacity:.5;cursor:default}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+input[type=email]{border:1px solid var(--line);border-radius:9px;padding:9px 10px;background:var(--bg);color:var(--fg);font:inherit;flex:1;min-width:0}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.note{font-size:.86rem;color:var(--muted);margin:0}
+h2{font-size:1.05rem;margin:0}
+.clock{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><h1>Waka<span>Back</span> Live</h1><span class="pill live" id="pill">Loading…</span></header>
+  <div class="card">
+    <p class="who" id="who">Loading the trip…</p>
+    <div class="banner ok" id="banner" hidden></div>
+    <div class="stats"><div class="stat"><b id="s-seen">—</b><small>Last update</small></div><div class="stat"><b id="s-dist">—</b><small>Distance so far</small></div><div class="stat"><b id="s-eta">—</b><small>Expected arrival</small></div></div>
+  </div>
+  <div class="mapwrap"><canvas id="map" aria-label="Map of the trip"></canvas></div>
+  <div class="card">
+    <h2>Go to them</h2>
+    <div class="row"><a class="btn primary" id="dir" target="_blank" rel="noopener" href="#">Directions (Google Maps)</a><a class="btn" id="follow" href="#">Follow their exact path in WakaBack</a></div>
+    <p class="note">Google Maps needs data. In WakaBack, tap <b>Go there again</b> to be guided along the same path, even without data.</p>
+  </div>
+  <div class="card" id="voicecard" hidden>
+    <h2>Hear the trip</h2>
+    <p class="note" id="v-note">The conversation arrives about 1 minute behind.</p>
+    <div class="row"><button class="btn primary" id="v-latest" type="button">▶ Listen to the latest</button></div>
+    <div><p class="note">Replay the whole trip with the voice (the dot moves with it):</p>
+      <input type="range" id="r-scrub" min="0" max="1000" value="0" aria-label="Trip position">
+      <div class="row" style="justify-content:space-between"><button class="btn" id="r-play" type="button">▶ Replay</button><span class="clock" id="r-clock">—</span></div></div>
+  </div>
+  <div class="card">
+    <h2>Notify me</h2>
+    <p class="note">Get an email if they're late, their phone stops sending, they press SOS, or when they arrive.</p>
+    <form class="row" id="nf"><input type="email" id="nf-email" placeholder="Your email address" aria-label="Your email address" autocomplete="email"><button class="btn" type="submit">Notify me</button></form>
+    <p class="note" id="nf-msg" role="status"></p>
+  </div>
+  <p class="note">WakaBack is not an emergency service. If you think someone is in danger, call the police or 112.</p>
+</div>
+<script src="premium-config.js"></script>
+<script src="cloud.js"></script>
+<script>
+(function(){
+"use strict";
+const $=id=>document.getElementById(id);
+const CFG=window.WAKA_CONFIG||{};const MIN=6e4;
+const id=(decodeURIComponent(location.hash||"").match(/[#&]s=([A-Za-z0-9]+)/)||[])[1];
+const APP=new URL("./",location.href).href;
+let cloud=null,doc=null,pts=[],nLoaded=-1,parts=[],playing=false,pt=0,raf=0,lastReal=0;
+const fmtClock=t=>new Date(t).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});
+const ago=ms=>{const s=Math.max(0,Math.round((Date.now()-ms)/1000));return s<60?s+" s ago":s<3600?Math.round(s/60)+" min ago":Math.round(s/3600)+" h ago";};
+const R=6371000,rad=d=>d*Math.PI/180;
+const dist=(a,b)=>{const dLa=rad(b[0]-a[0]),dLo=rad(b[1]-a[1]);const h=Math.sin(dLa/2)**2+Math.cos(rad(a[0]))*Math.cos(rad(b[0]))*Math.sin(dLo/2)**2;return 2*R*Math.asin(Math.min(1,Math.sqrt(h)));};
+const fmtDist=m=>m<1000?Math.round(m)+" m":(m/1000).toFixed(2)+" km";
+function css(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
+if(!id){$("who").textContent="This link is missing part of its address.";$("pill").textContent="Not found";$("pill").className="pill warn";return;}
+try{cloud=window.WBCloud.create(CFG);}catch(e){$("who").textContent="Connect to the internet to see this trip.";$("pill").textContent="Offline";$("pill").className="pill warn";return;}
+
+// ---- status ----
+function render(){
+  const b=$("banner");
+  if(!doc){$("who").textContent="This live trip has ended or the link has expired.";$("pill").textContent="Not available";$("pill").className="pill warn";b.hidden=true;return;}
+  const now=Date.now(),who=doc.who||"Your family member";
+  $("who").textContent=who+(doc.status==="ended"?"'s trip":" is on a trip");document.title=who+" · WakaBack Live";
+  $("s-seen").textContent=doc.lastAt?ago(doc.lastAt):"—";
+  $("s-eta").textContent=doc.expectedArrival?fmtClock(doc.expectedArrival):"Not set";
+  let pill="Live",cls="live",msg="",sub="",warn=false;
+  if(doc.status==="ended"){pill="Arrived";cls="ended";msg="They ended the trip at "+fmtClock(doc.endedAt||doc.lastAt)+".";sub="The map shows where they went and where they ended.";}
+  else if(doc.status==="sos"){pill="SOS";cls="warn";warn=true;msg=who+" pressed SOS.";sub="Call them now. If you can't reach them, call the police or 112. The map shows where they are.";}
+  else if(doc.expectedArrival&&now>doc.expectedArrival+30*MIN){pill="Late";cls="warn";warn=true;msg="Not arrived yet. They expected to arrive by "+fmtClock(doc.expectedArrival)+".";sub="Try calling them. The map shows their last known location.";}
+  else if(doc.lastAt&&now-doc.lastAt>10*MIN){pill="No update";cls="warn";warn=true;msg="No update for "+Math.round((now-doc.lastAt)/MIN)+" minutes.";sub="Their phone may be off, out of battery or without data. Last known location is on the map.";}
+  else{msg="Updated "+ago(doc.lastAt||doc.startedAt)+".";sub="This page refreshes by itself.";}
+  $("pill").textContent=pill;$("pill").className="pill "+cls;
+  b.hidden=false;b.className="banner "+(warn?"warn":"ok");b.innerHTML="";const m=document.createElement("span");m.textContent=msg;const s=document.createElement("small");s.textContent=sub;b.append(m,s);
+  const last=lastPoint();
+  if(last){$("dir").href="https://www.google.com/maps/dir/?api=1&destination="+last[0].toFixed(5)+","+last[1].toFixed(5);$("follow").href=APP+"#t="+tripCode();}
+  let d=0;for(let i=1;i<pts.length;i++)d+=dist(pts[i-1],pts[i]);$("s-dist").textContent=pts.length>1?fmtDist(d):"—";
+  $("voicecard").hidden=!doc.voice;
+  draw();}
+function lastPoint(){if(doc&&doc.last&&(!pts.length||doc.last.t>=pts[pts.length-1][2]))return [doc.last.lat,doc.last.lon,doc.last.t];return pts.length?pts[pts.length-1]:null;}
+
+// ---- route code so family can follow in WakaBack (same format as the app's share links) ----
+const B64="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_",EPOCH=1577836800;
+function encNums(arr){let o="";for(const v0 of arr){let v=Math.round(v0);let z=v<0?(-v*2-1):v*2;while(z>=32){o+=B64[(z%32)|32];z=Math.floor(z/32);}o+=B64[z];}return o;}
+function b64text(t){const bytes=new TextEncoder().encode(t);let bits=0,acc=0,o="";for(const b of bytes){acc=(acc<<8)|b;bits+=8;while(bits>=6){bits-=6;o+=B64[(acc>>bits)&63];}acc&=(1<<bits)-1;}if(bits)o+=B64[(acc<<(6-bits))&63];return o;}
+function tripCode(){let p=pts.slice();const l=lastPoint();if(l&&(!p.length||l[2]>p[p.length-1][2]))p.push(l);
+  const kept=[];p.forEach(x=>{if(!kept.length||dist(kept[kept.length-1],x)>=5)kept.push(x);});if(kept.length===1)kept.push([kept[0][0],kept[0][1],kept[0][2]+1000]);
+  const t0=kept[0][2];const flat=[];let a=0,b=0,c=0;kept.forEach(x=>{const la=Math.round(x[0]*1e5),lo=Math.round(x[1]*1e5),ts=Math.round((x[2]-t0)/1000);flat.push(la-a,lo-b,ts-c);a=la;b=lo;c=ts;});
+  return "WB2."+b64text(((doc&&doc.who)||"Shared")+"'s trip").slice(0,60)+"."+encNums([Math.round(t0/1000)-EPOCH])+"."+encNums(flat)+".";}
+
+// ---- map ----
+const cv=$("map"),ctx=cv.getContext("2d");
+function draw(){const dpr=window.devicePixelRatio||1,w=cv.clientWidth,h=cv.clientHeight;if(!w||!h)return;
+  if(cv.width!==Math.round(w*dpr)){cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);}ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.fillStyle=css("--map-bg");ctx.fillRect(0,0,w,h);
+  const all=pts.slice();const l=lastPoint();if(l)all.push(l);
+  if(!all.length){ctx.fillStyle=css("--muted");ctx.font="500 14px "+css("--f-body");ctx.textAlign="center";ctx.fillText(doc?"Waiting for the first location…":"",w/2,h/2);return;}
+  let mnA=1e9,mxA=-1e9,mnO=1e9,mxO=-1e9;all.forEach(p=>{mnA=Math.min(mnA,p[0]);mxA=Math.max(mxA,p[0]);mnO=Math.min(mnO,p[1]);mxO=Math.max(mxO,p[1]);});
+  const cA=(mnA+mxA)/2,cO=(mnO+mxO)/2,kx=Math.cos(rad(cA))*111320,ky=110540;
+  const sx=Math.max((mxO-mnO)*kx,120),sy=Math.max((mxA-mnA)*ky,120);const sc=Math.min(w/sx,h/sy)*0.8;
+  const X=p=>[w/2+(p[1]-cO)*kx*sc,h/2-(p[0]-cA)*ky*sc];
+  ctx.strokeStyle=css("--map-grid");ctx.lineWidth=1;ctx.beginPath();for(let x=0;x<w;x+=60){ctx.moveTo(x,0);ctx.lineTo(x,h);}for(let y=0;y<h;y+=60){ctx.moveTo(0,y);ctx.lineTo(w,y);}ctx.stroke();
+  const line=(arr,col,wd)=>{if(arr.length<2)return;ctx.strokeStyle=col;ctx.lineWidth=wd;ctx.lineJoin=ctx.lineCap="round";ctx.beginPath();arr.forEach((p,i)=>{const [x,y]=X(p);i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.stroke();};
+  const replay=playing||pt>0;
+  if(replay){line(all,css("--path-dim"),6);line(all.filter(p=>p[2]<=pt).concat([posAt(pt)]),css("--path"),6);}else line(all,css("--path"),6);
+  const [ax,ay]=X(all[0]);ctx.beginPath();ctx.arc(ax,ay,11,0,7);ctx.fillStyle=css("--path");ctx.fill();ctx.fillStyle=css("--surface");ctx.font="700 11px "+css("--f-body");ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText("A",ax,ay+.5);
+  const me=replay?posAt(pt):all[all.length-1];const [mx,my]=X(me);const sos=doc&&doc.status==="sos";
+  ctx.beginPath();ctx.arc(mx,my,18,0,7);ctx.fillStyle=(sos?css("--warn"):css("--me"))+"33";ctx.fill();ctx.beginPath();ctx.arc(mx,my,8,0,7);ctx.fillStyle=sos?css("--warn"):css("--me");ctx.fill();ctx.lineWidth=3;ctx.strokeStyle=css("--surface");ctx.stroke();}
+function posAt(t){const all=pts.slice();const l=lastPoint();if(l&&(!all.length||l[2]>all[all.length-1][2]))all.push(l);if(!all.length)return [0,0,t];
+  if(t<=all[0][2])return all[0];for(let i=1;i<all.length;i++){if(all[i][2]>=t){const a=all[i-1],b=all[i],f=(t-a[2])/((b[2]-a[2])||1);return [a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f,t];}}return all[all.length-1];}
+new ResizeObserver(draw).observe(cv);
+
+// ---- voice ----
+const audio=new Audio();audio.preload="auto";let segs=[],cur=-1,want=null;const cache={};
+audio.addEventListener("loadedmetadata",()=>{if(want!=null){try{audio.currentTime=want;}catch(e){}want=null;}});
+async function loadParts(){if(!doc||!doc.voice)return;try{parts=await cloud.listVoice(cloud.liveVoicePath(id));}catch(e){parts=[];}
+  const by={};parts.forEach(p=>{(by[p.seg]=by[p.seg]||{seg:p.seg,start:p.start,mime:p.mime,names:[]}).names.push(p.name);});
+  segs=Object.values(by).sort((a,b)=>a.seg-b.seg);
+  $("v-note").textContent=segs.length?"The conversation arrives about 1 minute behind.":"No voice has arrived yet. It arrives about 1 minute behind.";$("v-latest").disabled=!segs.length;$("r-play").disabled=!segs.length;}
+async function segUrl(k){const g=segs[k];const key=g.seg+":"+g.names.length;if(cache[key])return cache[key];
+  const blobs=[];for(const n of g.names)blobs.push(await cloud.getVoice(cloud.liveVoicePath(id),n));
+  return cache[key]=URL.createObjectURL(new Blob(blobs,{type:(g.mime||"audio/webm").split(";")[0]}));}
+async function playAt(t){let k=-1;for(let i=0;i<segs.length;i++){if(segs[i].start<=t)k=i;else break;}if(k<0){audio.pause();return;}
+  const off=(t-segs[k].start)/1000;if(k!==cur){cur=k;want=off;audio.src=await segUrl(k);}else if(Math.abs(audio.currentTime-off)>0.8&&!audio.ended){try{audio.currentTime=off;}catch(e){}}
+  if(audio.paused&&!audio.ended){audio.play().catch(()=>{});}}
+$("v-latest").onclick=async()=>{stopReplay();await loadParts();if(!segs.length)return;const k=segs.length-1;cur=-1;want=0;cur=k;audio.src=await segUrl(k);audio.play().catch(()=>{});$("v-latest").textContent="▶ Playing the latest…";audio.onended=()=>{$("v-latest").textContent="▶ Listen to the latest";};};
+function t0(){return pts.length?pts[0][2]:(doc&&doc.startedAt)||0;}function t1(){const l=lastPoint();return l?l[2]:(doc&&doc.lastAt)||0;}
+function stopReplay(){playing=false;cancelAnimationFrame(raf);audio.pause();$("r-play").textContent="▶ Replay";}
+function loop(ts){if(!playing)return;const dt=lastReal?ts-lastReal:0;lastReal=ts;pt+=dt;if(pt>=t1()){pt=t1();stopReplay();}
+  $("r-scrub").value=Math.round((pt-t0())/((t1()-t0())||1)*1000);$("r-clock").textContent=fmtClock(pt);playAt(pt);draw();if(playing)raf=requestAnimationFrame(loop);}
+$("r-play").onclick=async()=>{if(playing){stopReplay();return;}await loadParts();if(pt<=0||pt>=t1())pt=t0();playing=true;lastReal=0;cur=-1;$("r-play").textContent="❚❚ Pause";raf=requestAnimationFrame(loop);};
+$("r-scrub").oninput=e=>{pt=t0()+(t1()-t0())*(+e.target.value/1000);$("r-clock").textContent=fmtClock(pt);if(playing)playAt(pt);draw();};
+
+// ---- notify me ----
+const NK="wakaback.notify."+id;try{if(localStorage.getItem(NK))$("nf-msg").textContent="You'll get emails about this trip at "+localStorage.getItem(NK)+".";}catch(e){}
+$("nf").onsubmit=async e=>{e.preventDefault();const em=$("nf-email").value.trim();if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){$("nf-msg").textContent="Enter a valid email address.";return;}
+  try{await cloud.liveAddWatcher(id,em);try{localStorage.setItem(NK,em);}catch(x){}$("nf-msg").textContent="Done. We'll email "+em+" if they're late, stop sending, press SOS, or when they arrive.";$("nf-email").value="";}
+  catch(x){$("nf-msg").textContent="Couldn't save that. Check your internet and try again.";}};
+
+// ---- live updates ----
+async function onDoc(d){doc=d;if(d&&(d.lastAt||0)!==nLoaded){nLoaded=d.lastAt||0;try{pts=await cloud.livePoints(id);}catch(e){}if(d.voice)loadParts();}render();}
+cloud.liveWatch(id,onDoc);setInterval(render,15000);
+})();
+</script>
+</body>
+</html>

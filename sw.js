@@ -1,7 +1,7 @@
 // WayBack offline helper. Saves the app on the phone so it opens with data off.
 // Change VERSION whenever index.html changes so phones pick up the update.
-const VERSION = "wakaback-2026-11-01c";
-const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
+const VERSION = "wakaback-2026-11-01-premium1";
+const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png", "./premium.js", "./premium-config.js", "./cloud.js", "./live.html"];
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(CORE)).then(() => self.skipWaiting()));
@@ -32,8 +32,12 @@ self.addEventListener("fetch", e => {
     return;
   }
 
-  // Adverts are saved by the app itself; just pass these through.
+  // Adverts and Premium settings: always fetch fresh when online.
   if (url.pathname.endsWith("/ads.json")) return;
+  if (url.pathname.endsWith("/premium-config.js") || url.pathname.endsWith("/live.html")) {
+    e.respondWith(fetch(req).then(res => { const copy = res.clone(); if (res.ok) caches.open(VERSION).then(c => c.put(req, copy)); return res; }).catch(() => caches.match(req)));
+    return;
+  }
 
   // Fonts and the app's own files: use the saved copy, refresh it in the background.
   if (url.origin === location.origin || url.hostname === "fonts.googleapis.com" || url.hostname === "fonts.gstatic.com") {

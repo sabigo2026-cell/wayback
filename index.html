@@ -192,6 +192,7 @@ a.adlink:active .ad{transform:scale(.99)}
         <button class="btn danger" id="recstop" hidden>Stop and save</button>
         <button class="btn" id="recshare" hidden>Share where I am</button>
       </div>
+      <div id="livebox"></div>
       <div class="banner" id="recbatt" hidden><span>Battery low. Send your location to family before your phone switches off.</span><div class="row"><button class="btn sm" id="recbattsend" type="button">Send my location now</button></div></div>
       <p class="note" id="recnote">Walk your route with the screen on. WakaBack saves a point every few metres and marks the places you stop for a minute or more. Everything stays on your phone.</p>
     </div>
@@ -253,6 +254,9 @@ a.adlink:active .ad{transform:scale(.99)}
       </div>
     </div>
     <div class="view help" id="v-help" hidden>
+      <section>
+        <div id="acctsec"></div>
+      </section>
       <section>
         <h2>Contact us</h2>
         <p class="note">Questions, problems or ideas for WakaBack? Email us and we'll reply.</p>
@@ -371,6 +375,8 @@ function simplify(pts,tol){if(pts.length<3)return pts.slice();const P=projector(
 const KEY="wayback.trips.v1";
 let memStore=null;
 function loadTrips(){try{const s=localStorage.getItem(KEY);if(s)return JSON.parse(s);}catch(e){} return memStore||null;}
+// Premium plugs in through these hooks (premium.js). Without it, they do nothing.
+function WBH(n,d){try{const P=window.WBPremium;if(P&&P.on)return P.on(n,d);}catch(e){console.warn(e);}}
 function saveTrips(){memStore=S.trips;try{localStorage.setItem(KEY,JSON.stringify(S.trips));}catch(e){}}
 
 // ---------- trip builder (shared by GPS, demo and sample) ----------
@@ -460,18 +466,18 @@ function recStart(demo){
   if(S.rec)return;
   const B=newBuilder();S.rec={B,demo,cur:null,acc:null,startReal:Date.now(),src:null,voice:null};
   if(!demo&&$("recvoice").checked)S.rec.voice=voiceStart(msg=>{$("recnote").textContent=msg;$("recnote").className="note warn";if(S.rec)S.rec.voice=null;renderRec();});
-  const onFix=p=>{if(!S.rec)return;if(p.acc&&p.acc>50){S.rec.acc=p.acc;renderRec();return;}S.rec.cur=p;S.rec.acc=p.acc;feed(B,p);if(/^Can't get a GPS fix/.test($("recnote").textContent)){$("recnote").className="note";$("recnote").textContent="GPS found. Recording your route.";}snapRec(false);checkBattery();renderRec();draw();};
+  const onFix=p=>{if(!S.rec)return;if(p.acc&&p.acc>50){S.rec.acc=p.acc;renderRec();return;}S.rec.cur=p;S.rec.acc=p.acc;feed(B,p);WBH("recFix",p);if(/^Can't get a GPS fix/.test($("recnote").textContent)){$("recnote").className="note";$("recnote").textContent="GPS found. Recording your route.";}snapRec(false);checkBattery();renderRec();draw();};
   if(demo){const shift=S.trips.length*0.0011;const o={lat:ORIGIN.lat+shift,lon:ORIGIN.lon-shift};const path=wpToLatLon(o,[[0,0],[60,80],[70,210],[190,260],[230,390],[330,430]]);
     S.rec.src=startSim(genFixes(path,{t0:Date.now(),pauses:{3:120000}}),onFix,()=>{$("recnote").textContent="Demo walk finished. Tap “Stop and save” to keep it.";});}
   else S.rec.src=startGPS(onFix,msg=>{if(!S.rec)return;$("recnote").textContent=msg;$("recnote").className="note warn";if(/blocked|can't read/i.test(msg)&&!S.rec.B.points.length){recCancel();}});
-  wake(true);S.zoom=1;setTab("record");renderRec();
+  wake(true);S.zoom=1;setTab("record");renderRec();WBH("recStart",{demo});
 }
-function recCancel(){if(!S.rec)return;clearSnap();{const v=voiceStop(S.rec.voice);if(v)vDelete(v.id);}S.rec.src&&S.rec.src.stop();S.rec=null;wake(false);renderRec();draw();}
+function recCancel(){if(!S.rec)return;clearSnap();WBH("recStopped",null);{const v=voiceStop(S.rec.voice);if(v)vDelete(v.id);}S.rec.src&&S.rec.src.stop();S.rec=null;wake(false);renderRec();draw();}
 function recStop(){
   if(!S.rec)return;const {B,demo}=S.rec;const wasShared=!!S.rec.shared;const audio=voiceStop(S.rec.voice);S.rec.src&&S.rec.src.stop();const r=finish(B);S.rec=null;wake(false);clearSnap();$("recbatt").hidden=true;
-  if(r.points.length<2){if(audio)vDelete(audio.id);$("recnote").textContent="Not enough of the route was recorded to save. Try walking a little further.";renderRec();draw();return;}
+  if(r.points.length<2){WBH("recStopped",null);if(audio)vDelete(audio.id);$("recnote").textContent="Not enough of the route was recorded to save. Try walking a little further.";renderRec();draw();return;}
   const t={id:"t"+Date.now(),name:(demo?"Demo walk, ":"Trip, ")+fmtDate(r.points[0].t),created:r.points[0].t,...r};if(audio)t.audio=audio;
-  S.trips.unshift(t);S.selId=t.id;saveTrips();$("recnote").className="note";$("recnote").textContent="Saved. Find it in Trips.";setTab("trips");
+  S.trips.unshift(t);S.selId=t.id;saveTrips();WBH("recStopped",t);WBH("tripSaved",t);$("recnote").className="note";$("recnote").textContent="Saved. Find it in Trips.";setTab("trips");
   if(!demo&&(wasShared||CONTACTS.length))openArrived(t);
 }
 function renderRec(){
@@ -514,7 +520,7 @@ function newSeg(V){
   try{mr=new MediaRecorder(V.stream,V.mime?{mimeType:V.mime,audioBitsPerSecond:24000}:{audioBitsPerSecond:24000});}catch(e){mr=new MediaRecorder(V.stream);}
   if(!V.mime)V.mime=mr.mimeType||"audio/webm";const mime=V.mime;let c=0;
   mr.ondataavailable=e=>{if(!e.data||!e.data.size)return;const n=c++;V.bytes+=e.data.size;
-    vPut({k:V.id+":"+pad5(seg)+":"+pad5(n),seg,c:n,start:segStart,mime,blob:e.data}).catch(()=>{});if(S.rec)renderRec();};
+    vPut({k:V.id+":"+pad5(seg)+":"+pad5(n),seg,c:n,start:segStart,mime,blob:e.data}).catch(()=>{});WBH("voiceChunk",{audioId:V.id,seg,c:n,start:segStart,mime,blob:e.data});if(S.rec)renderRec();};
   V.mr=mr;mr.start(5000);}
 function voiceStop(V){if(!V||V.stopped)return null;V.stopped=true;clearInterval(V.timer);
   try{V.mr&&V.mr.state!=="inactive"&&V.mr.stop();}catch(e){}
@@ -533,7 +539,10 @@ function voicePlayerFor(t){
     VP.segs=Object.keys(by).map(Number).sort((a,b)=>a-b).map(k=>{const g=by[k];g.parts.sort((a,b)=>a.c-b.c);
       return {start:g.start,url:URL.createObjectURL(new Blob(g.parts.map(x=>x.blob),{type:(g.mime||"audio/webm").split(";")[0]}))};});
     if(!VP.el){VP.el=new Audio();VP.el.preload="auto";VP.el.addEventListener("loadedmetadata",()=>{if(VP.want!=null){try{VP.el.currentTime=VP.want;}catch(e){}VP.want=null;}});}
-    VP.loading=null;if(!VP.segs.length){VP.missing[t.id]=true;renderReplay();return null;}return VP;})
+    VP.loading=null;if(!VP.segs.length){
+      if(t.audio.cloud&&!t.audio.fetched&&window.WBPremium&&WBPremium.fetchVoice){VP.segs=null;VP.tripId=null;
+        return WBPremium.fetchVoice(t).then(ok=>{t.audio.fetched=true;if(ok)return voicePlayerFor(t);VP.missing[t.id]=true;renderReplay();return null;});}
+      VP.missing[t.id]=true;renderReplay();return null;}return VP;})
     .catch(()=>{VP.loading=null;VP.missing[t.id]=true;return null;});
   return VP.loading;}
 function voiceRelease(){if(VP.el){try{VP.el.pause();VP.el.removeAttribute("src");}catch(e){}}
@@ -729,6 +738,10 @@ function openShare(t,live){$("share").classList.remove("sos");$("sh-call").hidde
   $("sh-msg").textContent=SH.text;$("sh-len").textContent=SH.text.length+" characters, about "+Math.ceil(SH.text.length/153)+" SMS";
   $("sh-sms").href=smsLink([],SH.text);$("sh-wa").href="https://wa.me/?text="+encodeURIComponent(SH.text);
   $("sh-copy").textContent="Copy message";$("share").hidden=false;setTimeout(()=>$("sh-sms").focus(),0);}
+function openText(title,sub,text){$("share").classList.remove("sos");$("sh-call").hidden=true;SH.text=text;SH.t=null;
+  $("sh-title").textContent=title;$("sh-sub").textContent=sub||"";$("sh-msg").textContent=text;$("sh-len").textContent=text.length+" characters, about "+Math.ceil(text.length/153)+" SMS";
+  $("sh-sms").href=CONTACTS.length?smsHref(text):smsLink([],text);$("sh-wa").href="https://wa.me/?text="+encodeURIComponent(text);
+  $("sh-to").textContent=CONTACTS.length?"To: "+contactNames():"";$("sh-copy").textContent="Copy message";$("share").hidden=false;}
 function closeShare(){$("share").hidden=true;}
 function copyText(text,el,btn){const done=()=>{btn.textContent="Copied";setTimeout(()=>btn.textContent="Copy code",1600);};
   const sel=()=>{const r=document.createRange();r.selectNodeContents(el);const s=getSelection();s.removeAllRanges();s.addRange(r);btn.textContent="Selected, press copy";};
@@ -742,14 +755,14 @@ function renderTrips(){
       const r=document.createElement("div");r.className="row";r.append(mk("Save name","btn sm primary",()=>{t.name=inp.value.trim()||t.name;S.editId=null;saveTrips();renderAll();}),mk("Cancel","btn sm",()=>{S.editId=null;renderTrips();}));c.appendChild(r);
       setTimeout(()=>inp.focus(),0);}
     else{const h=document.createElement("h3");h.textContent=t.name;if(t.sample){const g=document.createElement("span");g.className="tag";g.textContent="Sample";h.appendChild(g);}if(t.shared){const g=document.createElement("span");g.className="tag";g.textContent="Shared";h.appendChild(g);}c.appendChild(h);}
-    const m=document.createElement("div");m.className="meta";m.textContent=(t.audio?"🎙️ ":"")+fmtDate(t.created)+" · "+fmtDist(st.d)+" · "+fmtDur(st.dur)+" · "+st.stops+(st.stops===1?" stop":" stops");c.appendChild(m);
+    const m=document.createElement("div");m.className="meta";m.textContent=(t.cloudAt?"☁️ ":"")+(t.audio?"🎙️ ":"")+fmtDate(t.created)+" · "+fmtDist(st.d)+" · "+fmtDur(st.dur)+" · "+st.stops+(st.stops===1?" stop":" stops");c.appendChild(m);
     const r=document.createElement("div");r.className="row";
     r.append(mk("Replay","btn sm primary",()=>{pick(t.id);setTab("replay");}),mk("Take me back","btn sm",()=>{pick(t.id);setDir("back");setTab("back");}),mk("Go there again","btn sm",()=>{pick(t.id);setDir("there");setTab("back");}),
       mk("Share","btn sm",()=>{pick(t.id);openShare(t,false);}),...(t.shared?[dirLink(t)]:[]),mk("Rename","btn sm",()=>{S.editId=t.id;renderTrips();}),
       mk("Delete","btn sm danger",()=>{S.confirmId=t.id;renderTrips();}));
     c.appendChild(r);
     if(S.confirmId===t.id){const q=document.createElement("div");q.className="row";q.style.alignItems="center";const s=document.createElement("span");s.className="note warn";s.textContent=t.audio?"Delete this trip and its voice recording for good?":"Delete this trip for good?";
-      q.append(s,mk("Delete","btn sm danger",()=>{if(t.audio){if(VP.tripId===t.id)voiceRelease();vDelete(t.audio.id);}S.trips=S.trips.filter(x=>x.id!==t.id);if(S.selId===t.id)S.selId=S.trips[0]?S.trips[0].id:null;S.confirmId=null;saveTrips();if(S.back&&S.back.G.id===t.id)backEnd();renderAll();}),mk("Keep","btn sm",()=>{S.confirmId=null;renderTrips();}));c.appendChild(q);}
+      q.append(s,mk("Delete","btn sm danger",()=>{if(t.audio){if(VP.tripId===t.id)voiceRelease();vDelete(t.audio.id);}WBH("tripDeleted",t);S.trips=S.trips.filter(x=>x.id!==t.id);if(S.selId===t.id)S.selId=S.trips[0]?S.trips[0].id:null;S.confirmId=null;saveTrips();if(S.back&&S.back.G.id===t.id)backEnd();renderAll();}),mk("Keep","btn sm",()=>{S.confirmId=null;renderTrips();}));c.appendChild(q);}
     c.addEventListener("click",e=>{if(e.target.closest("button,input"))return;pick(t.id);});
     box.appendChild(c);});
   if(!S.trips.length){const e=document.createElement("p");e.className="empty";e.textContent="No trips yet. Record your first one in Record.";box.appendChild(e);}
@@ -840,8 +853,11 @@ function lastTripPoint(){ // end of the most recent real trip in the last 12 hou
   const t=S.trips.find(x=>!x.sample&&!x.shared&&x.points&&x.points.length);if(!t)return null;const e=t.points[t.points.length-1];
   return Date.now()-e.t<12*3600*1000?{...e,fromTrip:true}:null;}
 function findMeLink(p){const a={lat:p.lat,lon:p.lon,t:p.t||Date.now()};return SITE+"#t="+encodeTrip({name:"SOS location "+fmtClock(a.t),created:a.t,points:[a,{...a,t:a.t+1000}],stops:[]});}
+let SOSLAST=null;
+function refreshSOS(){if(SOSLAST&&!$("share").hidden&&$("share").classList.contains("sos"))openSOS(SOSLAST[0],SOSLAST[1]);}
 function sosMessage(p,state){
   let m="SOS from WakaBack: I NEED HELP.";
+  {const x=WBH("sosLine");if(x)m+="\n"+x;}
   if(p){const at=p.lat.toFixed(5)+","+p.lon.toFixed(5);
     m+=(p.fromTrip?"\nMy last known location (from my last WakaBack trip, "+fmtClock(p.t)+"): ":"\nMy location: ")+"https://maps.google.com/?q="+at+" ("+at+")"+(p.acc&&!p.fromTrip?" accurate to about "+Math.round(p.acc)+" m, "+fmtClock(p.t||Date.now()):"")+".";}
   else m+=state==="finding"?"\n(Finding my location…)":"\nI couldn't get my GPS location.";
@@ -850,7 +866,7 @@ function sosMessage(p,state){
   else if(p)m+="\nFind me with WakaBack: "+findMeLink(p);
   return m+"\nPlease call me. If you can't reach me, call 112.";}
 function openSOS(p,state){
-  const text=sosMessage(p,state);SH.text=text;
+  SOSLAST=[p,state];const text=sosMessage(p,state);SH.text=text;
   $("share").classList.add("sos");$("sh-title").textContent="Send SOS";
   let sub=CONTACTS.length?"Tap Send by SMS, then press Send in your messages app.":"Add emergency contacts in Help so SOS goes straight to them. For now, pick who to send it to.";
   if(state==="finding")sub="Finding your location… You can already send, but waiting a few seconds adds where you are.";
@@ -863,6 +879,7 @@ function openSOS(p,state){
   $("sh-to").textContent=CONTACTS.length?"To: "+contactNames():"";$("sh-call").hidden=false;
   $("sh-copy").textContent="Copy message";$("share").hidden=false;}
 function triggerSOS(){
+  WBH("sos",{});
   try{navigator.vibrate&&navigator.vibrate([200,100,200]);}catch(e){}
   const p=lastKnown();if(p){openSOS(p);return;}
   openSOS(null,"finding");setTimeout(()=>$("sh-sms").focus(),0);
@@ -1108,8 +1125,12 @@ setTab(RECOVERED||S.openShared||S.sharedErr||S.trips.some(t=>!t.sample)?"trips":
 if(RECOVERED){$("importnote").className="note";$("importnote").textContent="WakaBack closed during a recording. Your route so far was saved as “"+RECOVERED.name+"”.";}
 if(S.openShared){$("importnote").className="note";$("importnote").textContent="Shared route added. Tap Replay to see it, or Go there again to follow it.";}
 if(S.sharedErr){$("importnote").className="note warn";$("importnote").textContent=S.sharedErr;}
+window.WBApp={S,saveTrips,renderAll,renderRec,renderAds,setTab,encodeTrip,decodeTrip,vGetAll,vPut,startGPS,recStart,recStop,openText,refreshSOS,
+  fmtDist,fmtDur,fmtClock,fmtDate,pathLen,SITE,lastKnown,say,NATIVE,IS_ANDROID,$,get contacts(){return CONTACTS;},voiceConsentGiven:()=>{try{return localStorage.getItem("wayback.voiceconsent.v1")==="yes";}catch(e){return false;}}};
+WBH("ready",{});
 })();
 </script>
-
+<script src="premium-config.js"></script>
+<script src="premium.js"></script>
 </body>
 </html>
