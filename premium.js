@@ -176,8 +176,8 @@
     const was = P.premium; P.premium = !!v;
     save(PKEY, P.premium ? "active" : null);
     try { A().renderAds(); } catch (e) {}
-    renderAcct(); renderLive(); renderUpsell();
-    if (P.premium && !was) syncNow(false);
+    renderAcct(); renderLive(); renderUpsell(); if (window.WBVault) WBVault.renderEntry();
+    if (P.premium && !was) { syncNow(false); if (window.WBVault) WBVault.on("signedIn"); }
   }
   const RC = () => (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Purchases) || null;
   async function rcSetup() {
@@ -205,7 +205,7 @@
   let syncTimer = null;
   function syncSoon() { clearTimeout(syncTimer); syncTimer = setTimeout(() => syncNow(false), 4000); }
   async function syncNow(manual) {
-    if (!P.premium || !P.user || P.sync.busy) return;
+    if (!P.premium || !P.user || P.sync.busy || (window.WBVault && WBVault.isOpen())) return;
     P.sync.busy = true; P.sync.err = ""; renderAcct();
     const app = A(); let changed = false;
     try {
@@ -386,7 +386,13 @@
     sos: () => { onSOS(); },
     sosLine: () => (P.live ? (P.live.voice ? "Live location and voice: " : "Live location: ") + liveLink(P.live.id) : ""),
   };
-  window.WBPremium = { on: (n, d) => (hooks[n] ? hooks[n](d) : undefined), fetchVoice, _state: P };
+  // Private trips (vault.js) get first say; when it handles a call it returns a value.
+  const SHARED = { ready: 1, signedIn: 1 };
+  window.WBPremium = { on: (n, d) => {
+    const V = window.WBVault; let r;
+    if (V && V.on) { r = V.on(n, d); if (r !== undefined && !SHARED[n]) return r; }
+    return hooks[n] ? hooks[n](d) : r;
+  }, fetchVoice, sync: () => syncNow(false), _state: P };
 
   // ---------- start ----------
   function boot() {
@@ -401,7 +407,7 @@
       try { P.cloud = window.WBCloud.create(CFG); } catch (e) { console.warn(e); return; }
       P.cloud.onUser(async (u) => {
         P.user = u; P.view = "signin";
-        if (u) { try { setPremium(await P.cloud.premium(false)); } catch (e) { setPremium(localStorage.getItem(PKEY) === "active"); } rcSetup(); }
+        if (u) { try { setPremium(await P.cloud.premium(false)); } catch (e) { setPremium(localStorage.getItem(PKEY) === "active"); } rcSetup(); if (window.WBVault) WBVault.on("signedIn"); }
         else setPremium(false);
         renderAcct(); renderLive();
         if (P.live) flushLive(true);

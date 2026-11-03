@@ -377,7 +377,7 @@ let memStore=null;
 function loadTrips(){try{const s=localStorage.getItem(KEY);if(s)return JSON.parse(s);}catch(e){} return memStore||null;}
 // Premium plugs in through these hooks (premium.js). Without it, they do nothing.
 function WBH(n,d){try{const P=window.WBPremium;if(P&&P.on)return P.on(n,d);}catch(e){console.warn(e);}}
-function saveTrips(){memStore=S.trips;try{localStorage.setItem(KEY,JSON.stringify(S.trips));}catch(e){}}
+function saveTrips(){if(WBH("saveTrips")===true)return;memStore=S.trips;try{localStorage.setItem(KEY,JSON.stringify(S.trips));}catch(e){}}
 
 // ---------- trip builder (shared by GPS, demo and sample) ----------
 function newBuilder(){return {points:[],stops:[],anchor:null,open:null,last:null};}
@@ -534,7 +534,7 @@ function voicePlayerFor(t){
   if(VP.tripId===t.id&&VP.segs)return Promise.resolve(VP);
   if(VP.tripId===t.id&&VP.loading)return VP.loading;
   voiceRelease();VP.tripId=t.id;
-  VP.loading=vGetAll(t.audio.id).then(rows=>{if(VP.tripId!==t.id)return null;const by={};
+  VP.loading=(WBH("vaultRows",t)||vGetAll(t.audio.id)).then(rows=>{if(VP.tripId!==t.id)return null;const by={};
     rows.forEach(r=>{(by[r.seg]=by[r.seg]||{start:r.start,mime:r.mime,parts:[]}).parts.push(r);});
     VP.segs=Object.keys(by).map(Number).sort((a,b)=>a-b).map(k=>{const g=by[k];g.parts.sort((a,b)=>a.c-b.c);
       return {start:g.start,url:URL.createObjectURL(new Blob(g.parts.map(x=>x.blob),{type:(g.mime||"audio/webm").split(";")[0]}))};});
@@ -759,7 +759,7 @@ function renderTrips(){
     const r=document.createElement("div");r.className="row";
     r.append(mk("Replay","btn sm primary",()=>{pick(t.id);setTab("replay");}),mk("Take me back","btn sm",()=>{pick(t.id);setDir("back");setTab("back");}),mk("Go there again","btn sm",()=>{pick(t.id);setDir("there");setTab("back");}),
       mk("Share","btn sm",()=>{pick(t.id);openShare(t,false);}),...(t.shared?[dirLink(t)]:[]),mk("Rename","btn sm",()=>{S.editId=t.id;renderTrips();}),
-      mk("Delete","btn sm danger",()=>{S.confirmId=t.id;renderTrips();}));
+      ...(WBH("tripButtons",t)||[]),mk("Delete","btn sm danger",()=>{S.confirmId=t.id;renderTrips();}));
     c.appendChild(r);
     if(S.confirmId===t.id){const q=document.createElement("div");q.className="row";q.style.alignItems="center";const s=document.createElement("span");s.className="note warn";s.textContent=t.audio?"Delete this trip and its voice recording for good?":"Delete this trip for good?";
       q.append(s,mk("Delete","btn sm danger",()=>{if(t.audio){if(VP.tripId===t.id)voiceRelease();vDelete(t.audio.id);}WBH("tripDeleted",t);S.trips=S.trips.filter(x=>x.id!==t.id);if(S.selId===t.id)S.selId=S.trips[0]?S.trips[0].id:null;S.confirmId=null;saveTrips();if(S.back&&S.back.G.id===t.id)backEnd();renderAll();}),mk("Keep","btn sm",()=>{S.confirmId=null;renderTrips();}));c.appendChild(q);}
@@ -1125,12 +1125,13 @@ setTab(RECOVERED||S.openShared||S.sharedErr||S.trips.some(t=>!t.sample)?"trips":
 if(RECOVERED){$("importnote").className="note";$("importnote").textContent="WakaBack closed during a recording. Your route so far was saved as “"+RECOVERED.name+"”.";}
 if(S.openShared){$("importnote").className="note";$("importnote").textContent="Shared route added. Tap Replay to see it, or Go there again to follow it.";}
 if(S.sharedErr){$("importnote").className="note warn";$("importnote").textContent=S.sharedErr;}
-window.WBApp={S,saveTrips,renderAll,renderRec,renderAds,setTab,encodeTrip,decodeTrip,vGetAll,vPut,startGPS,recStart,recStop,openText,refreshSOS,
+window.WBApp={S,saveTrips,mk,pick,vDelete,voiceRelease,saveTripsRaw:list=>{memStore=list;try{localStorage.setItem(KEY,JSON.stringify(list));}catch(e){}},renderAll,renderRec,renderAds,setTab,encodeTrip,decodeTrip,vGetAll,vPut,startGPS,recStart,recStop,openText,refreshSOS,
   fmtDist,fmtDur,fmtClock,fmtDate,pathLen,SITE,lastKnown,say,NATIVE,IS_ANDROID,$,get contacts(){return CONTACTS;},voiceConsentGiven:()=>{try{return localStorage.getItem("wayback.voiceconsent.v1")==="yes";}catch(e){return false;}}};
 WBH("ready",{});
 })();
 </script>
 <script src="premium-config.js"></script>
 <script src="premium.js"></script>
+<script src="vault.js"></script>
 </body>
 </html>
