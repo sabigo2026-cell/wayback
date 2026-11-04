@@ -29,7 +29,16 @@
   // ---------- stored vault ----------
   let M = null; // { v, mode:"recover"|"only", pw:{salt,iter,w}, rc:{salt,iter,w}, items:{id:{iv,ct,audio,up,vup}}, deleted:[], metaDirty, escrowed }
   try { M = JSON.parse(localStorage.getItem(VKEY) || "null"); } catch (e) {}
-  const saveM = () => { try { M ? localStorage.setItem(VKEY, JSON.stringify(M)) : localStorage.removeItem(VKEY); } catch (e) {} };
+  // The vault (locked trips) is kept in IndexedDB once the app is ready; localStorage is only the
+  // old place (moved across on first start) and a fallback if IndexedDB can't be used.
+  let MREADY = false;
+  const saveLS = () => { try { M ? localStorage.setItem(VKEY, JSON.stringify(M)) : localStorage.removeItem(VKEY); return true; } catch (e) { return false; } };
+  const saveM = () => {
+    const app = window.WBApp;
+    if (!MREADY || !app || !app.kvSet) { saveLS(); return; }
+    app.kvSet(VKEY, M ? JSON.stringify(M) : null).then(() => { try { localStorage.removeItem(VKEY); } catch (e) {} })
+      .catch((e) => { if (!saveLS() && app.storageWarn) app.storageWarn(true, e); });
+  };
   const V = { open: false, key: null, raw: null, normal: null, idle: 0, away: 0, view: null, pendingHide: null, msg: "", err: "" };
 
   async function wrapAll(raw, password, code) {
@@ -60,7 +69,7 @@
   }
 
   // ---------- trips in and out of the vault ----------
-  const packTrip = (t) => ({ code: A().encodeTrip(t), name: t.name, created: t.created, audio: t.audio ? { id: t.audio.id, start: t.audio.start, dur: t.audio.dur || 0, mime: t.audio.mime || "audio/webm" } : null });
+  const packTrip = (t) => ({ code: A().encodeTrip(t), name: t.name, created: t.created, note: t.note || "", audio: t.audio ? { id: t.audio.id, start: t.audio.start, dur: t.audio.dur || 0, mime: t.audio.mime || "audio/webm" } : null });
   async function sealTrip(t, key) {
     const it = await seal(key, enc.encode(JSON.stringify(packTrip(t))));
     const old = M.items[t.id] || {};
@@ -69,6 +78,7 @@
   async function unsealTrip(id, key) {
     const o = JSON.parse(dec.decode(await open_(key, M.items[id])));
     const t = A().decodeTrip(o.code); t.id = id; t.name = o.name || t.name; t.created = o.created || t.created; delete t.shared; t.private = true;
+    if (o.note) t.note = o.note; else delete t.note;
     if (o.audio) t.audio = { ...o.audio, fetched: true };
     return t;
   }
@@ -206,6 +216,7 @@
   #pvbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:var(--fg);color:var(--bg);border-radius:14px 14px 0 0;padding:8px 12px;font-weight:600}
   #pvbar .btn{background:var(--bg);color:var(--fg);border-color:var(--bg)}
   .pventry{display:flex;justify-content:flex-end}
+  .pvbadge{display:inline-block;background:var(--signal,#f2b705);color:#1d1600;font-size:.72rem;font-weight:700;border-radius:999px;padding:1px 8px;margin-left:4px}
   .pv h2{font-family:var(--f-display);font-size:1.25rem;margin:0}
   .pv{display:flex;flex-direction:column;gap:10px}
   .pv input[type=password],.pv input[type=text]{border:1px solid var(--line);border-radius:9px;padding:10px;background:var(--bg);width:100%;min-width:0;font:inherit;color:var(--fg)}
@@ -228,7 +239,16 @@
   async function renderSheet() {
     const c = $("pvcard"); const P = PM(); const email = P.user && P.user.email;
     const msg = (V.err ? `<p class="err" role="alert">${esc(V.err)}</p>` : "") + (V.msg ? `<p class="ok" role="status">${esc(V.msg)}</p>` : "");
-    if (V.view === "setup") c.innerHTML = `<h2>Set up Private trips</h2>
+    if (V.view === "upgrade") {
+      const W = window.WBPremium || {}; const on = !!W.enabled;
+      c.innerHTML = `<h2>🔒 Hiding trips is for Premium</h2>
+      <p class="note">Hide any trip, with its note and voice, behind a <b>private password</b> only you know. Even someone using your phone or your account can't see them.</p>
+      <p class="note" style="color:var(--fg)">⚠️ Right now your trips are saved <b>on this phone only</b>. If you lose it, they're gone. Upgrade to keep them safe and get much more from WakaBack:</p>
+      <div class="pm">${W.perksHTML ? W.perksHTML() : ""}</div>
+      ${on ? `<div class="row"><button class="btn primary" id="pv-up" type="button">Upgrade to Premium</button><button class="btn" id="pv-x" type="button">Not now</button></div>`
+           : `<p class="note"><b>Premium is coming soon.</b> We'll let you know in the app when it's ready.</p><div class="row"><button class="btn" id="pv-x" type="button">Close</button></div>`}`;
+    }
+    else if (V.view === "setup") c.innerHTML = `<h2>Set up Hidden trips</h2>
       <p class="note">Hidden trips are locked with a <b>private password</b> that's separate from your account password. Someone who signs in with your account won't see them.</p>
       <input type="password" id="pv-p1" placeholder="Private password (at least 6 characters)" autocomplete="new-password" aria-label="Private password">
       <input type="password" id="pv-p2" placeholder="Type it again" autocomplete="new-password" aria-label="Type the private password again">
@@ -238,12 +258,12 @@
       <label class="opt"><input type="radio" name="pv-mode" value="only"><div><b>Only me</b><span>Strongest privacy. If you forget the password and lose your recovery code, hidden trips are lost forever.</span></div></label>
       ${msg}<div class="row"><button class="btn primary" id="pv-go" type="button">Continue</button><button class="btn" id="pv-x" type="button">Cancel</button></div>`;
     else if (V.view === "code") c.innerHTML = `<h2>Your recovery code</h2>
-      <p class="note">Write this down and keep it somewhere safe (not only on this phone). It opens your Private trips if you forget the password.</p>
+      <p class="note">Write this down and keep it somewhere safe (not only on this phone). It opens your Hidden trips if you forget the password.</p>
       <div class="code" id="pv-code">${esc(V.code)}</div>
       <div class="row"><button class="btn sm" id="pv-copy" type="button">Copy code</button></div>
       <label class="sw" style="display:flex;gap:8px;align-items:center;font-weight:600"><input type="checkbox" id="pv-saved" style="width:20px;height:20px"> I've written it down</label>
       <div class="row"><button class="btn primary" id="pv-done" type="button" disabled>Done</button></div>`;
-    else if (V.view === "unlock") c.innerHTML = `<h2>${V.pendingHide ? "Hide this trip" : "Private trips"}</h2>
+    else if (V.view === "unlock") c.innerHTML = `<h2>${V.pendingHide ? "Hide this trip" : "Hidden trips"}</h2>
       <p class="note">${V.pendingHide ? "Enter your private password to hide “" + esc(V.pendingHide.name) + "”." : "Enter your private password."}</p>
       <form id="pv-form"><input type="password" id="pv-pw" placeholder="Private password" autocomplete="current-password" aria-label="Private password"></form>
       ${msg}<div class="row"><button class="btn primary" id="pv-go" type="button">${V.pendingHide ? "Hide trip" : "Open"}</button><button class="btn" id="pv-x" type="button">Cancel</button></div>
@@ -279,6 +299,7 @@
     const on = (id, fn) => { const el = $(id); if (el) el.onclick = fn; };
     const P = PM();
     on("pv-x", closeSheet);
+    on("pv-up", () => { closeSheet(); A().setTab("help"); setTimeout(() => { const s = $("acctsec"); s && s.scrollIntoView({ behavior: "smooth" }); }, 60); });
     on("pv-back", () => show("unlock", { err: "", msg: "" }));
     on("pv-usecode", () => show("usecode", { err: "", msg: "" }));
     on("pv-forgot", () => show("forgot", { err: "", msg: "" }));
@@ -301,7 +322,7 @@
       busyBtn(); let raw;
       try { raw = await keyFromPassword(pw); } catch (e) { return err("That private password isn't right."); }
       const t = V.pendingHide;
-      if (t) { await hideTrip(t, await importVK(raw)); closeSheet(); flash("Trip hidden. Open it from 🔒 Private."); return; }
+      if (t) { await hideTrip(t, await importVK(raw)); closeSheet(); flash("Trip hidden. Open it from 🔒 Hidden trips."); return; }
       closeSheet(); await openVault(raw);
     });
     if (V.view === "usecode") on("pv-go", async () => {
@@ -316,7 +337,7 @@
       show("code", { code, err: "", msg: "", afterCode: () => openVault(raw) });
     });
     if (V.view === "forgot") {
-      on("pv-req", async () => { try { await P.cloud.escrowRequest(); V.msg = "Email sent. Check your inbox (and spam)."; V.err = ""; } catch (e) { V.err = /no spare|not-found/i.test(String(e.code || e.message)) ? "Email reset isn't set up for these Private trips. Use your recovery code." : "Couldn't send the email. Check your internet."; } renderSheet(); });
+      on("pv-req", async () => { try { await P.cloud.escrowRequest(); V.msg = "Email sent. Check your inbox (and spam)."; V.err = ""; } catch (e) { V.err = /no spare|not-found/i.test(String(e.code || e.message)) ? "Email reset isn't set up for these Hidden trips. Use your recovery code." : "Couldn't send the email. Check your internet."; } renderSheet(); });
       on("pv-cancel", async () => { try { await P.cloud.escrowCancel(); V.msg = "Reset cancelled."; } catch (e) { V.err = "Couldn't cancel. Check your internet."; } renderSheet(); });
       on("pv-release", async () => {
         try { const b64 = await P.cloud.escrowRelease(); V.raw = fromB64(b64); show("newpw", { err: "", msg: "" }); }
@@ -332,10 +353,17 @@
   function canUse() { const P = PM(); return !!(P.premium || M); }
   function renderEntry() {
     const v = $("v-trips"); if (!v) return; let e = $("pv-entry");
-    const show_ = canUse() && !V.open;
+    // Free users see the button too: tapping it explains Premium and how to upgrade (no access).
+    const teaser = !canUse() && !V.open;
+    const show_ = (canUse() && !V.open) || teaser;
     if (!show_) { if (e) e.remove(); return; }
     if (!e) { e = document.createElement("div"); e.id = "pv-entry"; e.className = "pventry"; v.insertBefore(e, v.firstChild); }
-    e.innerHTML = `<button class="btn sm" type="button">🔒 Private</button>`;
+    if (teaser) {
+      e.innerHTML = `<button class="btn sm" type="button">🔒 Hidden trips <span class="pvbadge">Premium</span></button>`;
+      e.querySelector("button").onclick = () => show("upgrade", { err: "", msg: "" });
+      return;
+    }
+    e.innerHTML = `<button class="btn sm" type="button">🔒 Hidden trips</button>`;
     e.querySelector("button").onclick = () => { if (!M) { if (!PM().premium) return; show("setup", { err: "", msg: "" }); } else show("unlock", { pendingHide: null, err: "", msg: "" }); };
   }
   function renderBar() {
@@ -343,7 +371,7 @@
     if (!V.open) { if (b) b.remove(); renderEntry(); return; }
     if (!b) { b = document.createElement("div"); b.id = "pvbar"; const panel = document.querySelector(".app .panel"); panel && panel.insertBefore(b, panel.firstChild); }
     const n = A().S.trips.length;
-    b.innerHTML = `<span>🔒 Private trips (${n})</span><button class="btn sm" id="pv-home" type="button">🏠 Home</button>`;
+    b.innerHTML = `<span>🔒 Hidden trips (${n})</span><button class="btn sm" id="pv-home" type="button">🏠 Home</button>`;
     $("pv-home").onclick = lock;
     renderEntry();
   }
@@ -359,12 +387,18 @@
       const app = A();
       if (V.open) return [app.mk("Unhide", "btn sm", () => unhideTrip(t))];
       if (!PM().premium || t.sample) return [];
-      return [app.mk("🔒 Hide", "btn sm", () => { if (!M) show("setup", { pendingHide: t, err: "", msg: "" }); else show("unlock", { pendingHide: t, err: "", msg: "" }); })];
+      return [app.mk("🙈 Hide", "btn sm", () => { if (!M) show("setup", { pendingHide: t, err: "", msg: "" }); else show("unlock", { pendingHide: t, err: "", msg: "" }); })];
     },
     vaultRows: (t) => (V.open && t.private && t.audio && V.key ? plainRows(t.audio.id, V.key, t.audio.mime) : undefined),
     signedIn: () => { pull(); push(); },
   };
   window.WBVault = { on: (n, d) => (hooks[n] ? hooks[n](d) : undefined), isOpen: () => V.open, lock, renderEntry, _m: () => M };
-  const boot = () => { if (!window.WBApp) return setTimeout(boot, 60); renderEntry(); };
+  const boot = () => {
+    if (!window.WBApp) return setTimeout(boot, 60);
+    const app = window.WBApp;
+    if (!app.kvGet) { MREADY = true; renderEntry(); return; }
+    app.kvGet(VKEY).then((v) => { if (v) { try { M = JSON.parse(v); } catch (e) {} } MREADY = true; if (!v && M) saveM(); renderEntry(); })
+      .catch(() => { MREADY = true; renderEntry(); });
+  };
   boot();
 })();

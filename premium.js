@@ -56,6 +56,7 @@
   .chips2{display:flex;flex-wrap:wrap;gap:6px}
   .chips2 button{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:6px 11px;font:inherit;font-size:.85rem;cursor:pointer;color:var(--fg)}
   .chips2 button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+  .upsell.warnbox{border-color:var(--signal,#f2b705);background:color-mix(in srgb,var(--signal,#f2b705) 12%,transparent);color:var(--fg)}
   .upsell{border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:.86rem;color:var(--muted);display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}
   @media (prefers-reduced-motion:reduce){.livebar .rec::before{animation:none}}`;
   document.head.appendChild(css);
@@ -86,6 +87,7 @@
       <li><b>Hear the conversation</b> on the live link (about 1 minute behind).</li>
       <li><b>Alerts</b>: family get an email if you're late or your phone goes silent.</li>
       <li><b>SOS</b> sends a live link and records voice automatically.</li>
+      <li><b>Hide trips</b>: hide trips, their notes and voice behind a private password only you know.</li>
       <li><b>No adverts.</b></li></ul>`;
   }
   function renderAcct() {
@@ -209,10 +211,11 @@
     P.sync.busy = true; P.sync.err = ""; renderAcct();
     const app = A(); let changed = false;
     try {
+      if (app.tripsReady) await app.tripsReady;
       for (const t of app.S.trips.slice()) {
         if (t.sample) continue;
         if (!t.cloudAt || t.cloudDirty) {
-          await P.cloud.putTrip({ id: t.id, name: t.name, created: t.created, code: app.encodeTrip(t), audio: t.audio ? { id: t.audio.id, start: t.audio.start, dur: t.audio.dur || 0, mime: t.audio.mime || "" } : null });
+          await P.cloud.putTrip({ id: t.id, name: t.name, created: t.created, note: (t.note || "").slice(0, 1000), code: app.encodeTrip(t), audio: t.audio ? { id: t.audio.id, start: t.audio.start, dur: t.audio.dur || 0, mime: t.audio.mime || "" } : null });
           t.cloudAt = Date.now(); delete t.cloudDirty; changed = true;
         }
         if (t.audio && !t.audio.fetched) { // upload voice parts not uploaded yet (late parts included)
@@ -231,6 +234,7 @@
         if (have.has(r.id)) continue;
         try {
           const t = app.decodeTrip(r.code); t.id = r.id; t.name = r.name || t.name; t.created = r.created || t.created; t.cloudAt = Date.now(); delete t.shared;
+          if (r.note) t.note = String(r.note).slice(0, 1000);
           if (r.audio && r.audio.id) t.audio = { ...r.audio, cloud: true, fetched: false, up: 1e9 };
           app.S.trips.push(t); changed = true;
         } catch (e) {}
@@ -367,10 +371,12 @@
   // ---------- small upsell on Trips for people without backup ----------
   function renderUpsell() {
     const v = $("v-trips"); if (!v) return; let u = $("pm-upsell");
-    const show = ON && !P.premium && (A().S.trips || []).some((t) => !t.sample);
+    // Free users: a standing reminder that their trips live only on this phone.
+    const show = !P.premium && (A().S.trips || []).some((t) => !t.sample);
     if (!show) { if (u) u.remove(); return; }
-    if (!u) { u = document.createElement("div"); u.id = "pm-upsell"; u.className = "upsell"; v.insertBefore(u, v.firstChild); }
-    u.innerHTML = `<span>Your trips are saved on this phone only. Premium backs them up online.</span><button class="btn sm" type="button">Learn more</button>`;
+    if (!u) { u = document.createElement("div"); u.id = "pm-upsell"; u.className = "upsell warnbox"; v.insertBefore(u, v.firstChild); }
+    u.innerHTML = `<span>⚠️ <b>Your trips are saved on this phone only.</b> If the phone is lost, stolen, damaged or reset, your trips and recordings are gone for good. ${ON ? "Premium keeps them safe online so you can get them back anytime, on any phone." : "Premium online backup is coming soon."}</span>${ON ? `<button class="btn sm primary" type="button">Keep my trips safe</button>` : ""}`;
+    if (!ON) return;
     u.querySelector("button").onclick = () => { A().setTab("help"); setTimeout(() => $("acctsec") && $("acctsec").scrollIntoView({ behavior: "smooth" }), 50); };
   }
 
@@ -392,12 +398,16 @@
     const V = window.WBVault; let r;
     if (V && V.on) { r = V.on(n, d); if (r !== undefined && !SHARED[n]) return r; }
     return hooks[n] ? hooks[n](d) : r;
-  }, fetchVoice, sync: () => syncNow(false), _state: P };
+  }, fetchVoice, sync: () => syncNow(false), enabled: ON, perksHTML,
+    // App lock "Forgot PIN?": proves the account password (needs internet)
+    checkPassword: async (pw) => { if (!P.cloud || !P.user || !P.user.email) throw new Error("not signed in"); await P.cloud.signIn(P.user.email, pw); return true; },
+    _state: P };
 
   // ---------- start ----------
   function boot() {
     if (!window.WBApp) return setTimeout(boot, 50);
     hooks.ready();
+    if (A().tripsReady) A().tripsReady.then(() => renderUpsell());
     if (!ON) return;
     if (P.live && !A().S.rec) { // the app closed while sharing live
       setTimeout(() => { if (P.live && !A().S.rec) { const box = $("livebox"); if (box) { renderLive(); const n = document.createElement("p"); n.className = "note"; n.textContent = "Your live link from your last trip is still open. Tap Stop sharing if you've arrived."; box.appendChild(n); } } }, 300);

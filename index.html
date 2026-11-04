@@ -78,6 +78,10 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 .trip .meta{font-size:.82rem;color:var(--muted);font-variant-numeric:tabular-nums}
 .tag{font-size:.7rem;font-weight:600;padding:1px 7px;border-radius:999px;background:var(--signal);color:#1d1600;margin-left:6px;vertical-align:2px}
 .trip input{border:1px solid var(--line);border-radius:8px;padding:6px 8px;background:var(--bg);width:100%}
+.trip textarea.tnote-in{border:1px solid var(--line);border-radius:8px;padding:6px 8px;background:var(--bg);color:inherit;width:100%;min-height:76px;font:inherit;font-size:.9rem;resize:vertical}
+.tnote{margin:0;font-size:.88rem;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--fg);background:var(--bg);border-left:3px solid var(--accent);border-radius:6px;padding:6px 9px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.tnote.full{-webkit-line-clamp:unset;display:block;max-height:9em;overflow:auto}
+.shnote{display:flex;gap:8px;align-items:flex-start;font-size:.92rem;cursor:pointer}.shnote input{margin-top:3px;width:18px;height:18px;flex:none}
 textarea{width:100%;min-height:70px;border:1px solid var(--line);border-radius:10px;padding:8px;background:var(--bg);font-family:var(--f-mono);font-size:.75rem;resize:vertical;overflow-wrap:anywhere}
 .code{font-family:var(--f-mono);font-size:.72rem;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px;max-height:90px;overflow:auto;overflow-wrap:anywhere;user-select:all}
 .big{font-family:var(--f-display);font-weight:800;font-size:1.55rem;line-height:1.15;letter-spacing:-.01em;text-wrap:balance;margin:0}
@@ -134,6 +138,25 @@ a.adlink:active .ad{transform:scale(.99)}
 .sosbtn span{position:relative}
 .sheet.sos .card{border:2px solid var(--warn)}
 .sheet.sos h2{color:var(--warn)}
+.al-locked .app{visibility:hidden}
+.al{position:fixed;inset:0;z-index:45;background:var(--bg);color:var(--fg);display:flex;align-items:center;justify-content:center;padding:max(16px,env(safe-area-inset-top,0px)) 16px max(16px,env(safe-area-inset-bottom,0px));overflow-y:auto}
+.al-card{width:100%;max-width:360px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center}
+.al-brand{font-family:var(--f-display);font-weight:800;font-size:1.4rem}.al-brand span{color:var(--accent)}
+.al h2{font-family:var(--f-display);font-weight:800;font-size:1.25rem;margin:0}
+.al .note{margin:0;font-size:.9rem;color:var(--muted);text-align:left}
+.al-dots{display:flex;gap:14px;margin:4px 0}.al-dots i{width:16px;height:16px;border-radius:50%;border:2px solid var(--fg);display:block}.al-dots i.on{background:var(--fg)}
+.al-dots.shake{animation:alshake .35s}@keyframes alshake{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+.al-err{color:var(--warn);font-weight:600;font-size:.9rem;margin:0;min-height:1.2em}
+.al-pad{display:grid;grid-template-columns:repeat(3,72px);gap:12px;justify-content:center}
+.al-pad button{height:64px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--fg);font-size:1.5rem;font-weight:600;cursor:pointer;font-family:inherit}
+.al-pad button:disabled{opacity:.35}.al-pad button.blank{visibility:hidden}
+.al-row{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;align-items:center}
+.al-link{background:none;border:0;color:var(--accent);font:inherit;font-weight:600;text-decoration:underline;cursor:pointer;padding:6px}
+.al input[type=password]{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--surface);color:var(--fg);width:100%;font:inherit}
+.al-code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:1.5rem;font-weight:700;letter-spacing:.06em;background:var(--surface);border:2px dashed var(--accent);border-radius:12px;padding:12px 16px;user-select:all}
+.al-tick{display:flex;gap:8px;align-items:center;font-weight:600}.al-tick input{width:20px;height:20px}
+.al input[type=text]{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--surface);color:var(--fg);width:100%;font:inherit;text-transform:uppercase;letter-spacing:.05em}
+.al .alsos{background:var(--warn);border-color:var(--warn);color:#fff;font-weight:800;min-width:140px}
 .sheet.sos #sh-sms,.sheet.sos #sh-call{background:var(--warn);border-color:var(--warn);color:#fff}
 @media (max-width:440px){#chip{display:none}}
 .contacts{display:flex;flex-direction:column;gap:8px}
@@ -150,6 +173,7 @@ a.adlink:active .ad{transform:scale(.99)}
 @media (prefers-reduced-motion:reduce){.dot.live,.vbanner .rec::before{animation:none}}
 </style>
 <style>html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}img{max-width:100%}body{margin:0;-webkit-tap-highlight-color:transparent;user-select:none}textarea,input,.code{user-select:text}</style>
+<script>try{if(localStorage.getItem("wayback.applock.v1"))document.documentElement.classList.add("al-locked");}catch(e){}</script>
 </head>
 <body>
 <div class="app">
@@ -211,6 +235,7 @@ a.adlink:active .ad{transform:scale(.99)}
       <div id="rp-empty" class="empty">Pick a trip in Trips to watch it again.</div>
       <div id="rp-body" hidden style="display:flex;flex-direction:column;gap:12px">
         <div><span class="eyebrow" id="rp-name"></span><p class="big clock" id="rp-clock">—</p></div>
+        <p class="tnote full" id="rp-note" hidden></p>
         <div class="stats">
           <div class="stat"><b id="rp-el">0:00:00</b><small>Elapsed</small></div>
           <div class="stat"><b id="rp-dist">0 m</b><small>Covered</small></div>
@@ -234,6 +259,7 @@ a.adlink:active .ad{transform:scale(.99)}
       <div id="bk-empty" class="empty">Pick a trip in Trips, then tap “Take me back”.</div>
       <div id="bk-body" hidden style="display:flex;flex-direction:column;gap:12px">
         <span class="eyebrow" id="bk-name"></span>
+        <p class="tnote full" id="bk-tnote" hidden></p>
         <div class="seg" id="bk-dir" role="group" aria-label="Direction"><button data-d="back" aria-pressed="true">Take me back</button><button data-d="there" aria-pressed="false">Go there again</button></div>
         <div class="guide" id="bk-guide"><p class="big" id="bk-instr">Ready when you are</p><span class="note" id="bk-sub">WakaBack will lead you along the path you took, in reverse.</span></div>
         <div class="bar"><i id="bk-bar"></i></div>
@@ -270,9 +296,14 @@ a.adlink:active .ad{transform:scale(.99)}
       </section>
       <section>
         <h2>Emergency contacts</h2>
-        <p class="note">The people WakaBack texts when you hold SOS or tell family you've arrived. SMS works without data.</p>
+        <p class="note">The people WakaBack texts when you tap SOS or tell family you've arrived. SMS works without data.</p>
         <div class="contacts" id="contacts"></div>
         <div class="row"><button class="btn sm primary" id="savecontacts" type="button">Save contacts</button><span class="note" id="contactsnote"></span></div>
+      </section>
+      <section>
+        <h2>App lock</h2>
+        <p class="note" id="al-status"></p>
+        <div class="row" id="al-btns"></div>
       </section>
       <section>
         <h2>Keep recording reliable</h2>
@@ -291,6 +322,40 @@ a.adlink:active .ad{transform:scale(.99)}
       <p class="note">WakaBack 1.0 · Sabigo Connect Technologies</p>
     </div>
   </section>
+</div>
+
+<div class="al" id="applock" hidden role="dialog" aria-modal="true" aria-labelledby="al-title">
+  <div class="al-card">
+    <div class="al-brand">Waka<span>Back</span></div>
+    <h2 id="al-title">Enter your PIN</h2>
+    <p class="note" id="al-sub" hidden></p>
+    <div id="al-pinbox" style="display:flex;flex-direction:column;align-items:center;gap:12px">
+      <div class="al-dots" id="al-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <p class="al-err" id="al-err" role="alert"></p>
+      <div class="al-pad" id="al-pad"></div>
+    </div>
+    <div id="al-codebox" hidden style="width:100%;display:flex;flex-direction:column;gap:10px;align-items:center">
+      <div class="al-code" id="al-code"></div>
+      <label class="al-tick"><input type="checkbox" id="al-saved"> I've written it down</label>
+      <button class="btn primary" id="al-codedone" type="button" disabled>Done</button>
+    </div>
+    <div id="al-rcbox" hidden style="width:100%;display:flex;flex-direction:column;gap:10px">
+      <input type="text" id="al-rc" placeholder="Recovery code, e.g. 7KQ2-M9XA-4HRT" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="Recovery code">
+      <p class="al-err" id="al-rcerr" role="alert"></p>
+      <button class="btn primary" id="al-rcgo" type="button">Remove PIN</button>
+      <button class="al-link" id="al-usepw" type="button" hidden>Use my account password instead</button>
+    </div>
+    <div id="al-pwbox" hidden style="width:100%;display:flex;flex-direction:column;gap:10px">
+      <input type="password" id="al-pw" placeholder="Your WakaBack account password" autocomplete="current-password" aria-label="Account password">
+      <p class="al-err" id="al-pwerr" role="alert"></p>
+      <button class="btn primary" id="al-pwgo" type="button">Remove PIN</button>
+    </div>
+    <div class="al-row">
+      <button class="al-link" id="al-forgot" type="button">Forgot PIN?</button>
+      <button class="al-link" id="al-cancel" type="button">Cancel</button>
+    </div>
+    <button class="btn alsos" id="al-sos" type="button">SOS</button>
+  </div>
 </div>
 
 <div class="sheet" id="battery" hidden role="dialog" aria-modal="true" aria-labelledby="bt-title">
@@ -317,6 +382,7 @@ a.adlink:active .ad{transform:scale(.99)}
     <p class="note" id="sh-sub"></p>
     <div class="code" id="sh-msg" style="max-height:150px;white-space:pre-wrap"></div>
     <span class="note" id="sh-len"></span>
+    <label class="shnote" id="sh-noteopt" hidden><input type="checkbox" id="sh-note"><span id="sh-notelbl">Include my note</span></label>
     <div class="row">
       <a class="btn primary" id="sh-sms" href="#">Send by SMS</a>
       <a class="btn" id="sh-wa" href="#" target="_blank" rel="noopener">Send on WhatsApp</a>
@@ -377,7 +443,63 @@ let memStore=null;
 function loadTrips(){try{const s=localStorage.getItem(KEY);if(s)return JSON.parse(s);}catch(e){} return memStore||null;}
 // Premium plugs in through these hooks (premium.js). Without it, they do nothing.
 function WBH(n,d){try{const P=window.WBPremium;if(P&&P.on)return P.on(n,d);}catch(e){console.warn(e);}}
-function saveTrips(){if(WBH("saveTrips")===true)return;memStore=S.trips;try{localStorage.setItem(KEY,JSON.stringify(S.trips));}catch(e){}}
+function saveTrips(){if(WBH("saveTrips")===true)return;persistTrips(S.trips);}
+// Trips live in IndexedDB ("wayback-data"), which can hold gigabytes. Older versions kept them in
+// localStorage (about 5 MB, roughly 300 km of trips); they are moved across once, automatically.
+const TDB={db:null,ready:false,cache:new Map(),q:Promise.resolve(),pending:null,failed:false,warned:false};
+function tdb(){if(TDB.db)return Promise.resolve(TDB.db);return new Promise((ok,no)=>{try{const r=indexedDB.open("wayback-data",1);
+  r.onupgradeneeded=()=>{const d=r.result;if(!d.objectStoreNames.contains("trips"))d.createObjectStore("trips",{keyPath:"id"});if(!d.objectStoreNames.contains("kv"))d.createObjectStore("kv");};
+  r.onsuccess=()=>{TDB.db=r.result;TDB.db.onversionchange=()=>{try{TDB.db.close();}catch(e){}TDB.db=null;};ok(TDB.db);};r.onerror=()=>no(r.error);r.onblocked=()=>no(new Error("blocked"));}catch(e){no(e);}});}
+function tx(stores,mode,fn){return tdb().then(d=>new Promise((ok,no)=>{const t=d.transaction(stores,mode);let out;try{out=fn(t);}catch(e){no(e);return;}
+  t.oncomplete=()=>ok(typeof IDBRequest!=="undefined"&&out instanceof IDBRequest?out.result:out);t.onerror=()=>no(t.error);t.onabort=()=>no(t.error||new Error("abort"));}));}
+function kvGet(k){return tx(["kv"],"readonly",t=>t.objectStore("kv").get(k));}
+function kvSet(k,v){return tx(["kv"],"readwrite",t=>{v==null?t.objectStore("kv").delete(k):t.objectStore("kv").put(v,k);});}
+function cleanTrip(t){const o={...t};delete o._s;return o;}
+function persistTrips(list){
+  memStore=list;
+  if(!TDB.ready){TDB.pending=list;return;} // saved once the stored trips have loaded
+  if(TDB.noIDB){try{localStorage.setItem(KEY,JSON.stringify(list));if(TDB.failed){TDB.failed=false;storageWarn(false);}}catch(e){TDB.failed=true;storageWarn(true,e);}return;}
+  TDB.q=TDB.q.then(()=>{
+    const want=new Map();list.forEach(t=>{if(t&&t.id)want.set(t.id,JSON.stringify(cleanTrip(t)));});
+    const put=[],del=[];want.forEach((j,id)=>{if(TDB.cache.get(id)!==j)put.push([id,j]);});TDB.cache.forEach((j,id)=>{if(!want.has(id))del.push(id);});
+    const order=list.map(t=>t.id);
+    return tx(["trips","kv"],"readwrite",t=>{const st=t.objectStore("trips");put.forEach(([id,j])=>st.put(JSON.parse(j)));del.forEach(id=>st.delete(id));t.objectStore("kv").put(order,"order");})
+      .then(()=>{put.forEach(([id,j])=>TDB.cache.set(id,j));del.forEach(id=>TDB.cache.delete(id));if(TDB.failed){TDB.failed=false;storageWarn(false);}});
+  }).catch(e=>{console.warn("trip save failed",e);TDB.failed=true;storageWarn(true,e);
+    clearTimeout(TDB.retry);TDB.retry=setTimeout(()=>{if(TDB.failed&&memStore)persistTrips(memStore);},30000);});}
+function storageWarn(on,e){let b=$("storewarn");
+  if(!on){if(b)b.remove();return;}
+  if(!b){b=document.createElement("div");b.id="storewarn";b.setAttribute("role","alert");
+    b.style.cssText="position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:60;background:#c2402a;color:#fff;border-radius:12px;padding:12px 14px;font-size:.92rem;line-height:1.4;box-shadow:0 6px 24px rgba(0,0,0,.3);display:flex;gap:10px;align-items:flex-start";
+    b.innerHTML='<span style="flex:1"></span><button type="button" style="background:none;border:0;color:#fff;font-size:1.2rem;line-height:1;cursor:pointer" aria-label="Close">✕</button>';
+    b.querySelector("button").onclick=()=>b.remove();document.body.appendChild(b);}
+  const full=e&&/quota/i.test(String(e.name||e.message||e));
+  b.firstChild.textContent=full?"Your phone is almost full, so WakaBack couldn't save your latest trip changes. Free some space (photos, videos, old apps), then keep WakaBack open: it will try again.":"WakaBack couldn't save your trips just now. Keep the app open; it will try again.";}
+const tripsReady=(function(){
+  if(!window.indexedDB){TDB.ready=true;return Promise.resolve();}
+  return Promise.all([tx(["trips"],"readonly",t=>t.objectStore("trips").getAll()),kvGet("order"),kvGet("migrated")]).then(async([rows,order,migrated])=>{
+    let list;
+    if(!migrated){ // first start on this version: move trips over from localStorage
+      let old=null;try{old=JSON.parse(localStorage.getItem(KEY)||"null");}catch(e){}
+      list=Array.isArray(old)?old.filter(t=>t&&t.id):[];
+      await tx(["trips","kv"],"readwrite",t=>{const st=t.objectStore("trips");list.forEach(x=>st.put(cleanTrip(x)));t.objectStore("kv").put(list.map(x=>x.id),"order");t.objectStore("kv").put(Date.now(),"migrated");});
+      try{localStorage.removeItem(KEY);}catch(e){}
+    }else{const pos=new Map((order||[]).map((id,i)=>[id,i]));list=rows.slice().sort((a,b)=>(pos.has(a.id)?pos.get(a.id):-1)-(pos.has(b.id)?pos.get(b.id):-1)||(b.created||0)-(a.created||0));}
+    list.forEach(t=>TDB.cache.set(t.id,JSON.stringify(cleanTrip(t))));
+    // keep anything added while loading (a shared link just opened, a recovered recording)
+    const base=TDB.pending||S.trips;const startIds=TDB.startIds||new Set();const extra=base.filter(t=>t&&t.id&&!startIds.has(t.id)&&!list.some(x=>x.id===t.id||(x.name===t.name&&x.created===t.created)));
+    TDB.ready=true;const vaultOpen=window.WBVault&&WBVault.isOpen&&WBVault.isOpen();
+    if(list.length||extra.length){const merged=extra.concat(list);
+      if(!vaultOpen){S.trips=merged;if(!S.trips.some(t=>t.id===S.selId))S.selId=S.trips[0].id;}
+      persistTrips(merged);}
+    else if(TDB.pending&&!vaultOpen)persistTrips(TDB.pending);
+    TDB.pending=null;
+    try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist();}catch(e){}
+    // the first screen was chosen before the trips loaded: returning users open on Trips, not the sample
+    try{if(S.tab==="replay"&&!(S.play&&S.play.playing)&&!vaultOpen&&S.trips.some(t=>!t.sample)){S.play=null;S.selId=S.trips[0].id;setTab("trips");}}catch(e){}
+    try{renderAll();}catch(e){}
+  }).catch(e=>{console.warn("IndexedDB unavailable, using localStorage",e);TDB.ready=true;TDB.noIDB=true;if(TDB.pending){const l=TDB.pending;TDB.pending=null;persistTrips(l);}});
+})();
 
 // ---------- trip builder (shared by GPS, demo and sample) ----------
 function newBuilder(){return {points:[],stops:[],anchor:null,open:null,last:null};}
@@ -421,7 +543,7 @@ function sampleTrip(){
 const S={voiceReplay:true,tripVoice:false,dir:"back",tab:"record",trips:[],selId:null,zoom:1,rec:null,play:null,back:null,editId:null,confirmId:null,shareId:null};
 S.trips=loadTrips()||[sampleTrip()];
 if(!S.trips.length)S.trips=[sampleTrip()];
-S.selId=S.trips[0].id;
+S.selId=S.trips[0].id;TDB.startIds=new Set(S.trips.map(t=>t.id));
 const sel=()=>S.trips.find(t=>t.id===S.selId)||null;
 function tripStats(t){const d=pathLen(t.points);const dur=t.points.length?t.points[t.points.length-1].t-t.points[0].t:0;return {d,dur,stops:t.stops.length};}
 
@@ -477,7 +599,7 @@ function recStop(){
   if(!S.rec)return;const {B,demo}=S.rec;const wasShared=!!S.rec.shared;const audio=voiceStop(S.rec.voice);S.rec.src&&S.rec.src.stop();const r=finish(B);S.rec=null;wake(false);clearSnap();$("recbatt").hidden=true;
   if(r.points.length<2){WBH("recStopped",null);if(audio)vDelete(audio.id);$("recnote").textContent="Not enough of the route was recorded to save. Try walking a little further.";renderRec();draw();return;}
   const t={id:"t"+Date.now(),name:(demo?"Demo walk, ":"Trip, ")+fmtDate(r.points[0].t),created:r.points[0].t,...r};if(audio)t.audio=audio;
-  S.trips.unshift(t);S.selId=t.id;saveTrips();WBH("recStopped",t);WBH("tripSaved",t);$("recnote").className="note";$("recnote").textContent="Saved. Find it in Trips.";setTab("trips");
+  S.trips.unshift(t);S.selId=t.id;saveTrips();WBH("recStopped",t);WBH("tripSaved",t);$("recnote").className="note";$("recnote").textContent="Saved. Find it in Trips."+(isPremium()?"":" It's saved on this phone only.");setTab("trips");
   if(!demo&&(wasShared||CONTACTS.length))openArrived(t);
 }
 function renderRec(){
@@ -607,7 +729,7 @@ function pausePlay(){if(S.play&&S.play.playing){S.play.playing=false;cancelAnima
 function renderReplay(){
   const t=sel();$("rp-empty").hidden=!!t;$("rp-body").hidden=!t;if(!t)return;replayInit();const p=S.play,pos=playPos();
   const t0=t.points[0].t,t1=t.points[t.points.length-1].t,total=p.cum[p.cum.length-1];
-  $("rp-name").textContent=t.name;$("rp-clock").textContent=fmtClock(p.t);$("rp-el").textContent=fmtDur(p.t-t0);
+  $("rp-name").textContent=t.name;showNote("rp-note",t);$("rp-clock").textContent=fmtClock(p.t);$("rp-el").textContent=fmtDur(p.t-t0);
   const cov=coveredDist(pos);$("rp-dist").textContent=fmtDist(cov);$("rp-total").textContent=fmtDist(total);$("rp-pct").textContent=Math.round(total?cov/total*100:0)+"%";
   $("rp-scrub").value=Math.round((p.t-t0)/((t1-t0)||1)*1000);$("rp-play").textContent=p.playing?"Pause":(p.t>=t1?"Play again":"Play");
   [...$("rp-speed").children].forEach(b=>b.setAttribute("aria-pressed",String(+b.dataset.s===p.speed)));
@@ -631,17 +753,40 @@ function guide(G,pos){
     if(Math.abs(dl)>=35){turn={d:G.cum[j]-along,dir:dl>0?"right":"left",mag:Math.abs(dl),j};break;}}
   return {off:best.d,remain,along,near,turn,i:best.i,f:best.f};}
 function turnText(tn){const verb=tn.mag>=120?"Make a sharp turn":tn.mag>=60?"Turn":"Bear";return verb+" "+tn.dir;}
+// Divided roads: going back in a vehicle usually means the opposite lane, which can be tens of metres
+// from the recorded route (wide medians, service lanes). When someone in a vehicle is within LANE_M of
+// the route and moving the same way as the guidance, treat them as on the route ("other lane").
+// Near the start, moving the wrong way means they are driving on to a U-turn: tell them to turn around.
+const LANE_M=80;
+function laneAdjust(b,g,p){
+  const tr=b.trail;let prev=null;
+  for(let i=tr.length-2;i>=0;i--){if(p.t-tr[i].t>30000)break;if(dist(tr[i],p)>=12){prev=tr[i];break;}}
+  const sp=typeof p.speed==="number"&&p.speed>=0?p.speed:prev?dist(prev,p)/Math.max(1,(p.t-prev.t)/1000):0;
+  if(sp>4.5)b.vehicle=true; // faster than running: keke, okada, car, bus
+  g.offRaw=g.off;g.lane=false;g.turnAround=false;
+  if(!prev){if(b.lane&&b.vehicle&&g.off<=LANE_M){g.lane=true;g.off=0;}return g;} // stopped in traffic: keep the lane
+  const A=b.G.path[g.i],B=b.G.path[g.i+1]||A;const diff=Math.abs(((bearing(prev,p)-bearing(A,B)+540)%360)-180);
+  if(b.vehicle&&g.off>15&&g.off<=LANE_M&&diff<40){g.lane=true;b.lane=true;g.off=0;}
+  else{b.lane=false;
+    // still at the start, gone past it on the way to a U-turn (up to 600 m): no "left your route" warning
+    const beyond=g.i===0&&g.f<0.02; // past the start point itself, not beside the route
+    if(!b.turned&&beyond&&g.offRaw>25&&g.offRaw<=600){
+      if(diff>140||(b.ta&&diff>=40)){g.turnAround=true;b.ta=true;}       // going away, or making the U-turn
+      else if(diff<40){g.rejoin=true;}                                    // turned, coming back towards the route
+    }}
+  if(g.along>=60)b.turned=true;
+  return g;}
 function backStart(demo){
   const G=backPrepare();if(!G)return;if(S.back&&S.back.src)S.back.src.stop();
   S.back={G,demo,trail:[],cur:null,startT:null,src:null,arrived:false,lastT:null};
-  const onFix=p=>{const b=S.back;if(!b||b.arrived)return;if(p.acc&&p.acc>50)return;if(/^Can't get a GPS fix/.test($("bk-note").textContent)){$("bk-note").className="note";$("bk-note").textContent="GPS found. Guiding you now.";}b.cur=p;if(b.startT===null)b.startT=p.t;b.lastT=p.t;b.trail.push(p);b.g=guide(b.G,p);if(b.g.remain<15&&b.g.off<25){b.arrived=true;b.src&&b.src.stop();wake(false);}voiceUpdate(b);guideVoice(b);checkBattery();renderBack();draw();};
+  const onFix=p=>{const b=S.back;if(!b||b.arrived)return;if(p.acc&&p.acc>50)return;if(/^Can't get a GPS fix/.test($("bk-note").textContent)){$("bk-note").className="note";$("bk-note").textContent="GPS found. Guiding you now.";}b.cur=p;if(b.startT===null)b.startT=p.t;b.lastT=p.t;b.trail.push(p);b.g=laneAdjust(b,guide(b.G,p),p);if(b.g.remain<15&&b.g.off<25){b.arrived=true;b.src&&b.src.stop();wake(false);}voiceUpdate(b);guideVoice(b);checkBattery();renderBack();draw();};
   if(demo){S.back.src=startSim(genFixes(G.path,{t0:Date.now(),speed:1.4,dev:[0.42,0.58,48]}),onFix);}
   else S.back.src=startGPS(onFix,msg=>{if(!S.back)return;$("bk-note").textContent=msg;$("bk-note").className="note warn";if(/blocked|can't read/i.test(msg)&&!S.back.trail.length)backEnd();},"back");
   wake(true);S.zoom=1;setTab("back");renderBack();}
 function backEnd(){if(S.back&&S.back.src)S.back.src.stop();voicePause();S.back=null;wake(false);renderBack();draw();}
 function renderBack(){
   const t=sel();$("bk-empty").hidden=!!t;$("bk-body").hidden=!t;if(!t)return;
-  {const tv=$("bk-tripvoice");tv.hidden=!(t.audio&&S.dir==="there"&&pathLen(t.points)>=5);tv.textContent=S.tripVoice?"🎙️ Trip recording: On":"🎙️ Trip recording: Off";tv.setAttribute("aria-pressed",String(!!S.tripVoice));}const there=S.dir==="there";$("bk-name").textContent=(there?"Again to the end of: ":"Back along: ")+t.name;
+  {const tv=$("bk-tripvoice");tv.hidden=!(t.audio&&S.dir==="there"&&pathLen(t.points)>=5);tv.textContent=S.tripVoice?"🎙️ Trip recording: On":"🎙️ Trip recording: Off";tv.setAttribute("aria-pressed",String(!!S.tripVoice));}const there=S.dir==="there";showNote("bk-tnote",t);$("bk-name").textContent=(there?"Again to the end of: ":"Back along: ")+t.name;
   [...$("bk-dir").children].forEach(x=>x.setAttribute("aria-pressed",String(x.dataset.d===S.dir)));$("bk-leftlbl").textContent=there?"To the destination":"To the start";
   const b=S.back&&S.back.G.id===t.id?S.back:null;const active=!!b&&!b.arrived;
   $("bk-start").hidden=active;$("bk-demo").hidden=active;$("bk-end").hidden=!b;$("bk-end").textContent=b&&b.arrived?"Done":"End guidance";
@@ -650,11 +795,14 @@ function renderBack(){
     $("bk-bar").style.width="0";["bk-left","bk-off","bk-src"].forEach(i=>$(i).textContent="—");$("bk-time").textContent="0:00:00";return;}
   $("bk-src").textContent=b.demo?"Demo":"GPS";
   if(!b.g){$("bk-instr").textContent="Finding you…";$("bk-sub").textContent="Waiting for your first position.";return;}
-  const g=b.g;$("bk-left").textContent=fmtDist(g.remain);$("bk-off").textContent=fmtDist(g.off);$("bk-time").textContent=fmtDur(b.lastT-b.startT);
+  const g=b.g;$("bk-left").textContent=fmtDist(g.remain);$("bk-off").textContent=g.lane?"Other lane":fmtDist(g.off);$("bk-time").textContent=fmtDur(b.lastT-b.startT);
   $("bk-bar").style.width=Math.min(100,g.along/(b.G.total||1)*100)+"%";
-  $("bk-arrived").hidden=!b.arrived;if(b.arrived){$("bk-instr").textContent=there?"You've arrived":"You're back at the start";$("bk-sub").textContent="Walked "+fmtDist(pathLen(b.trail))+" in "+fmtDur(b.lastT-b.startT)+".";return;}
+  $("bk-arrived").hidden=!b.arrived;if(b.arrived){$("bk-instr").textContent=there?"You've arrived":"You're back at the start";$("bk-sub").textContent=(b.vehicle?"Travelled ":"Walked ")+fmtDist(pathLen(b.trail))+" in "+fmtDur(b.lastT-b.startT)+".";return;}
   if(b.G.total<5){$("bk-instr").textContent=fmtDist(g.off)+" to go";$("bk-sub").textContent="Head "+compass(bearing(b.cur,g.near))+" to reach the shared location.";$("bk-left").textContent=fmtDist(g.off);$("bk-off").textContent="—";$("bk-bar").style.width="0";return;}
-  if(g.off>25){guideEl.classList.add("off");$("bk-instr").textContent="You've left the path";$("bk-sub").textContent="The path is "+fmtDist(g.off)+" to the "+compass(bearing(b.cur,g.near))+". Head that way to rejoin it.";return;}
+  if(g.rejoin){$("bk-instr").textContent="Keep going";$("bk-sub").textContent="You're heading back towards your route. "+fmtDist(g.remain+g.offRaw)+" to "+(there?"the destination":"the start")+".";return;}
+  if(g.turnAround){$("bk-instr").textContent="Turn around when it's safe";$("bk-sub").textContent=b.vehicle?"Use the next U-turn. WakaBack guides you once you're heading back, on either side of the road.":"Turn around and head back the way you came.";return;}
+  if(g.off>25){guideEl.classList.add("off");$("bk-instr").textContent=b.vehicle?"You've left your route":"You've left the path";
+    $("bk-sub").textContent=b.vehicle?"Your route is "+fmtDist(g.off)+" to the "+compass(bearing(b.cur,g.near))+". Keep following the road and head back towards it when it's safe.":"The path is "+fmtDist(g.off)+" to the "+compass(bearing(b.cur,g.near))+". Head that way to rejoin it.";return;}
   if(g.turn&&g.turn.d<=200){const d=Math.max(0,g.turn.d);$("bk-instr").textContent=d<12?turnText(g.turn)+" now":"In "+fmtDist(Math.round(d/5)*5)+", "+turnText(g.turn).toLowerCase();}
   else $("bk-instr").textContent="Keep straight"+(g.turn?" for "+fmtDist(Math.round(g.turn.d/10)*10):"");
   $("bk-sub").textContent=fmtDist(g.remain)+(there?" to the destination":" to where you started")+". Heading "+compass(bearing(b.cur,b.G.path[Math.min(b.G.idx+1,b.G.path.length-1)]))+".";}
@@ -683,8 +831,12 @@ function voiceUpdate(b){
   if(b.G.total<5){const step=g.off>500?200:50;const k=Math.ceil(g.off/step);
     if(!V.started){V.started=true;V.pk=k;say("Taking you to the shared location. "+spokenDist(g.off)+". Head "+compass(bearing(b.cur,g.near))+".",fast);}
     else if(k<V.pk){V.pk=k;say(spokenDist(g.off)+" to go. Head "+compass(bearing(b.cur,g.near))+".",fast);}return;}
-  if(g.off>25||(V.wasOff&&g.off>15)){if(!V.wasOff||b.lastT-V.offAt>30000){V.wasOff=true;V.offAt=b.lastT;say("You have left the path. Walk "+compass(bearing(b.cur,g.near))+" to get back on it.",true);}return;}
-  if(V.wasOff){V.wasOff=false;say("You are back on the path.",true);}
+  if(g.rejoin)return;
+  if(g.turnAround){if(!V.said.ta){V.said.ta=1;say(b.vehicle?"Turn around when it's safe. Use the next U-turn.":"Turn around and head back the way you came.",true);}return;}
+  if(g.off>25||(V.wasOff&&g.off>15)){if(!V.wasOff||b.lastT-V.offAt>(b.vehicle?60000:30000)){V.wasOff=true;V.offAt=b.lastT;
+    say(b.vehicle?"You have left your route. Keep following the road, and head back towards it when it's safe.":"You have left the path. Walk "+compass(bearing(b.cur,g.near))+" to get back on it.",true);}return;}
+  if(V.wasOff){V.wasOff=false;say(g.lane?"You're on your route, on the other side of the road.":"You are back on the path.",true);}
+  if(g.lane&&!V.said.lane&&V.said.ta){V.said.lane=1;say("Good. You're on your route, on the other side of the road.",true);}
   if(!V.started){V.started=true;say((there?"Starting. ":"Taking you back. ")+spokenDist(g.remain)+(there?" to the destination.":" to the start."),fast);}
   if(g.turn){const k=g.turn.j,d=g.turn.d;
     if(d<=15){if(!V.said["n"+k]){V.said["n"+k]=1;V.said["a"+k]=1;say(turnText(g.turn)+" now.",true);}}
@@ -703,42 +855,61 @@ function encNums(arr){let o="";for(const v0 of arr){let v=Math.round(v0);let z=v
 function decNums(str){const out=[];let z=0,mul=1;for(const ch of str){const d=B64.indexOf(ch);if(d<0)throw new Error("bad");z+=(d&31)*mul;if(d&32){mul*=32;}else{out.push(z%2?-(z+1)/2:z/2);z=0;mul=1;}}if(mul!==1)throw new Error("cut");return out;}
 function b64text(t){const bytes=new TextEncoder().encode(t);let bits=0,acc=0,o="";for(const b of bytes){acc=(acc<<8)|b;bits+=8;while(bits>=6){bits-=6;o+=B64[(acc>>bits)&63];}acc&=(1<<bits)-1;}if(bits)o+=B64[(acc<<(6-bits))&63];return o;}
 function textb64(s){const out=[];let bits=0,acc=0;for(const ch of s){const d=B64.indexOf(ch);if(d<0)throw new Error("bad");acc=(acc<<6)|d;bits+=6;if(bits>=8){bits-=8;out.push((acc>>bits)&255);acc&=(1<<bits)-1;}}return new TextDecoder().decode(new Uint8Array(out));}
-function encodeTrip(t){
+const NOTE_MAX=1000;
+function noteOf(t){return t&&typeof t.note==="string"?t.note.trim().slice(0,NOTE_MAX):"";}
+function showNote(id,t){const el=$(id);if(!el)return;const n=noteOf(t);el.hidden=!n;el.textContent=n?"📝 "+n:"";}
+// encodeTrip(t) never includes the note. encodeTrip(t,true) adds it as an extra part that older
+// versions of WakaBack simply ignore.
+function encodeTrip(t,withNote){
   const pts=simplify(t.points,3);const t0=pts[0].t;
   const flat=[];let pl=0,pn=0,pt=0;
   pts.forEach(p=>{const la=Math.round(p.lat*1e5),lo=Math.round(p.lon*1e5),ts=Math.round((p.t-t0)/1000);flat.push(la-pl,lo-pn,ts-pt);pl=la;pn=lo;pt=ts;});
   const st=[];const a0=pts[0];t.stops.forEach(x=>st.push(Math.round(x.lat*1e5)-Math.round(a0.lat*1e5),Math.round(x.lon*1e5)-Math.round(a0.lon*1e5),Math.round((x.from-t0)/1000),Math.round((x.to-x.from)/1000)));
-  return "WB2."+b64text((t.name||"Trip").slice(0,40))+"."+encNums([Math.round(t0/1000)-EPOCH])+"."+encNums(flat)+"."+encNums(st);}
-function findCode(text){const m=String(text||"").match(/WB2\.[A-Za-z0-9_-]*\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*|WB1\.[A-Za-z0-9+\/=]+/);return m?m[0]:null;}
+  const n=withNote?noteOf(t):"";
+  return "WB2."+b64text((t.name||"Trip").slice(0,40))+"."+encNums([Math.round(t0/1000)-EPOCH])+"."+encNums(flat)+"."+encNums(st)+(n?"."+b64text(n):"");}
+function findCode(text){const m=String(text||"").match(/WB2\.[A-Za-z0-9_-]*\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*(?:\.[A-Za-z0-9_-]+)?|WB1\.[A-Za-z0-9+\/=]+/);return m?m[0]:null;}
 function decodeTrip(input){
-  const code=findCode(String(input||"").replace(/\s+/g,""));
+  // Look in the message as it is first (the code ends at a line break), then with spaces removed
+  // in case a phone split a long code across lines.
+  const code=findCode(String(input||""))||findCode(String(input||"").replace(/\s+/g,""));
   if(!code)throw new Error("No WakaBack route found. Paste the whole message you received.");
   if(code.startsWith("WB1.")){let o;try{o=JSON.parse(decodeURIComponent(escape(atob(code.slice(4)))));}catch(e){throw new Error("The route looks incomplete. Copy the whole message and try again.");}
     if(!o.p||o.p.length<2)throw new Error("This route has no path in it.");
     return {id:"t"+Date.now(),name:o.n||"Shared trip",created:o.c,shared:true,points:o.p.map(a=>({lat:a[0]/1e5,lon:a[1]/1e5,t:o.c+a[2]*1000})),stops:(o.s||[]).map(a=>({lat:a[0]/1e5,lon:a[1]/1e5,from:o.c+a[2]*1000,to:o.c+a[3]*1000}))};}
-  const parts=code.split(".");let name,t0,flat,st;
+  const parts=code.split(".");let name,t0,flat,st,note="";
   try{name=textb64(parts[1])||"Shared trip";t0=(decNums(parts[2])[0]+EPOCH)*1000;flat=decNums(parts[3]);st=parts[4]?decNums(parts[4]):[];}
   catch(e){throw new Error("The route looks incomplete. Copy the whole message and try again.");}
+  try{if(parts[5])note=textb64(parts[5]).trim().slice(0,NOTE_MAX);}catch(e){note="";}
   if(flat.length<6||flat.length%3)throw new Error("The route looks incomplete. Copy the whole message and try again.");
   const points=[];let la=0,lo=0,ts=0;for(let i=0;i<flat.length;i+=3){la+=flat[i];lo+=flat[i+1];ts+=flat[i+2];points.push({lat:la/1e5,lon:lo/1e5,t:t0+ts*1000});}
   const stops=[];for(let i=0;i+3<st.length;i+=4){const f=t0+st[i+2]*1000;stops.push({lat:(Math.round(points[0].lat*1e5)+st[i])/1e5,lon:(Math.round(points[0].lon*1e5)+st[i+1])/1e5,from:f,to:f+st[i+3]*1000});}
-  return {id:"t"+Date.now(),name,created:t0,shared:true,points,stops};}
-function shareMessage(t,live){
-  const code=encodeTrip(t);const end=t.points[t.points.length-1];const st=tripStats(t);
+  const out={id:"t"+Date.now(),name,created:t0,shared:true,points,stops};if(note)out.note=note;return out;}
+function noteLine(t){const n=noteOf(t);return n?"\nNote: "+n:"";}
+function shareMessage(t,live,inc){
+  const code=encodeTrip(t,inc);const end=t.points[t.points.length-1];const st=tripStats(t);
   const at=end.lat.toFixed(5)+","+end.lon.toFixed(5);
   return (live?"I'm sharing my route so far with WakaBack.":"My route with WakaBack: "+t.name+".")+
     "\n"+(live?"I'm here now":"It ends here")+": https://maps.google.com/?q="+at+" ("+at+")"+
-    "\nRoute: "+fmtDist(st.d)+", "+fmtDur(st.dur)+", "+fmtClock(end.t)+
+    "\nRoute: "+fmtDist(st.d)+", "+fmtDur(st.dur)+", "+fmtClock(end.t)+(inc?noteLine(t):"")+
     "\nFollow it in WakaBack: "+SITE+"#t="+code+
     "\nNo data? Copy this whole message into WakaBack > Trips > Open a shared trip.";}
 // Share sheet
-const SH={text:"",t:null,live:false};
-function openShare(t,live){$("share").classList.remove("sos");$("sh-call").hidden=true;$("sh-to").textContent="";SH.t=t;SH.live=!!live;SH.text=shareMessage(t,live);$("sh-title").textContent=live?"Share where I am":"Share this route";
+const SH={text:"",t:null,live:false,inc:false,rebuild:null};
+// "Include my note": off by default, the person sharing decides each time.
+function noteOption(t,label,rebuild){const box=$("sh-noteopt"),cb=$("sh-note");const n=noteOf(t);
+  SH.rebuild=n?rebuild:null;box.hidden=!n;if(!n){SH.inc=false;return;}
+  if(SH.noteFor!==(t.id||t.name)){SH.inc=false;SH.noteFor=t.id||t.name;}
+  cb.checked=SH.inc;$("sh-notelbl").textContent=label||"Include my note: “"+(n.length>60?n.slice(0,60)+"…":n)+"”";}
+function shText(text){SH.text=text;$("sh-msg").textContent=text;$("sh-len").textContent=text.length+" characters, about "+Math.ceil(text.length/153)+" SMS";
+  $("sh-sms").href=$("share").classList.contains("sos")||SH.toContacts?smsHref(text):smsLink([],text);$("sh-wa").href="https://wa.me/?text="+encodeURIComponent(text);}
+setTimeout(()=>{$("sh-note").addEventListener("change",e=>{SH.inc=e.target.checked;if(SH.rebuild)shText(SH.rebuild());});},0);
+function openShare(t,live){$("share").classList.remove("sos");$("sh-call").hidden=true;$("sh-to").textContent="";SH.t=t;SH.live=!!live;SH.toContacts=false;
+  noteOption(t,null,()=>shareMessage(t,live,SH.inc));SH.text=shareMessage(t,live,SH.inc);$("sh-title").textContent=live?"Share where I am":"Share this route";
   $("sh-sub").textContent=live?"Sends the route you've recorded so far and where you are now.":"Family and friends can see where you went and follow the same path with WakaBack.";
   $("sh-msg").textContent=SH.text;$("sh-len").textContent=SH.text.length+" characters, about "+Math.ceil(SH.text.length/153)+" SMS";
   $("sh-sms").href=smsLink([],SH.text);$("sh-wa").href="https://wa.me/?text="+encodeURIComponent(SH.text);
   $("sh-copy").textContent="Copy message";$("share").hidden=false;setTimeout(()=>$("sh-sms").focus(),0);}
-function openText(title,sub,text){$("share").classList.remove("sos");$("sh-call").hidden=true;SH.text=text;SH.t=null;
+function openText(title,sub,text){$("share").classList.remove("sos");$("sh-call").hidden=true;SH.text=text;SH.t=null;noteOption(null);
   $("sh-title").textContent=title;$("sh-sub").textContent=sub||"";$("sh-msg").textContent=text;$("sh-len").textContent=text.length+" characters, about "+Math.ceil(text.length/153)+" SMS";
   $("sh-sms").href=CONTACTS.length?smsHref(text):smsLink([],text);$("sh-wa").href="https://wa.me/?text="+encodeURIComponent(text);
   $("sh-to").textContent=CONTACTS.length?"To: "+contactNames():"";$("sh-copy").textContent="Copy message";$("share").hidden=false;}
@@ -749,23 +920,29 @@ function copyText(text,el,btn){const done=()=>{btn.textContent="Copied";setTimeo
 
 // ---------- trips list ----------
 function renderTrips(){
-  const box=$("triplist");box.innerHTML="";
+  const box=$("triplist");const adSlot=$("ad-trips");if(adSlot&&adSlot.parentNode)adSlot.parentNode.removeChild(adSlot);box.innerHTML="";
   S.trips.forEach(t=>{const st=tripStats(t);const c=document.createElement("div");c.className="trip"+(t.id===S.selId?" sel":"");
-    if(S.editId===t.id){const inp=document.createElement("input");inp.id="rename-"+t.id;inp.value=t.name;inp.setAttribute("aria-label","Trip name");c.appendChild(inp);
-      const r=document.createElement("div");r.className="row";r.append(mk("Save name","btn sm primary",()=>{t.name=inp.value.trim()||t.name;S.editId=null;saveTrips();renderAll();}),mk("Cancel","btn sm",()=>{S.editId=null;renderTrips();}));c.appendChild(r);
+    if(S.editId===t.id){const inp=document.createElement("input");inp.id="rename-"+t.id;inp.value=t.name;inp.maxLength=40;inp.setAttribute("aria-label","Trip name");c.appendChild(inp);
+      const ta=document.createElement("textarea");ta.id="note-"+t.id;ta.className="tnote-in";ta.maxLength=NOTE_MAX;ta.value=t.note||"";
+      ta.placeholder=t.private?"Note (optional). Locked with your private password, like this trip.":"Note (optional): who you met, landmarks, the gate colour, a phone number…";ta.setAttribute("aria-label","Trip note");c.appendChild(ta);
+      const cnt=document.createElement("span");cnt.className="note";const upd=()=>{cnt.textContent=ta.value.length+" / "+NOTE_MAX+(t.private?" · 🔒 locked":" · saved on this phone"+(t.cloudAt?" and backed up":""));};upd();ta.oninput=upd;c.appendChild(cnt);
+      const r=document.createElement("div");r.className="row";r.append(mk("Save","btn sm primary",()=>{t.name=inp.value.trim()||t.name;const n=ta.value.trim().slice(0,NOTE_MAX);if(n)t.note=n;else delete t.note;t.cloudDirty=true;S.editId=null;saveTrips();renderAll();}),mk("Cancel","btn sm",()=>{S.editId=null;renderTrips();}));c.appendChild(r);
       setTimeout(()=>inp.focus(),0);}
     else{const h=document.createElement("h3");h.textContent=t.name;if(t.sample){const g=document.createElement("span");g.className="tag";g.textContent="Sample";h.appendChild(g);}if(t.shared){const g=document.createElement("span");g.className="tag";g.textContent="Shared";h.appendChild(g);}c.appendChild(h);}
     const m=document.createElement("div");m.className="meta";m.textContent=(t.cloudAt?"☁️ ":"")+(t.audio?"🎙️ ":"")+fmtDate(t.created)+" · "+fmtDist(st.d)+" · "+fmtDur(st.dur)+" · "+st.stops+(st.stops===1?" stop":" stops");c.appendChild(m);
+    if(S.editId!==t.id&&noteOf(t)){const nb=document.createElement("p");nb.className="tnote";nb.textContent="📝 "+noteOf(t);c.appendChild(nb);}
     const r=document.createElement("div");r.className="row";
     r.append(mk("Replay","btn sm primary",()=>{pick(t.id);setTab("replay");}),mk("Take me back","btn sm",()=>{pick(t.id);setDir("back");setTab("back");}),mk("Go there again","btn sm",()=>{pick(t.id);setDir("there");setTab("back");}),
-      mk("Share","btn sm",()=>{pick(t.id);openShare(t,false);}),...(t.shared?[dirLink(t)]:[]),mk("Rename","btn sm",()=>{S.editId=t.id;renderTrips();}),
+      mk("Share","btn sm",()=>{pick(t.id);openShare(t,false);}),...(t.shared?[dirLink(t)]:[]),mk(noteOf(t)?"Rename / note":"Rename / add note","btn sm",()=>{S.editId=t.id;renderTrips();}),
       ...(WBH("tripButtons",t)||[]),mk("Delete","btn sm danger",()=>{S.confirmId=t.id;renderTrips();}));
     c.appendChild(r);
     if(S.confirmId===t.id){const q=document.createElement("div");q.className="row";q.style.alignItems="center";const s=document.createElement("span");s.className="note warn";s.textContent=t.audio?"Delete this trip and its voice recording for good?":"Delete this trip for good?";
-      q.append(s,mk("Delete","btn sm danger",()=>{if(t.audio){if(VP.tripId===t.id)voiceRelease();vDelete(t.audio.id);}WBH("tripDeleted",t);S.trips=S.trips.filter(x=>x.id!==t.id);if(S.selId===t.id)S.selId=S.trips[0]?S.trips[0].id:null;S.confirmId=null;saveTrips();if(S.back&&S.back.G.id===t.id)backEnd();renderAll();}),mk("Keep","btn sm",()=>{S.confirmId=null;renderTrips();}));c.appendChild(q);}
-    c.addEventListener("click",e=>{if(e.target.closest("button,input"))return;pick(t.id);});
+      q.append(s,mk("Delete","btn sm danger",()=>withPin("Enter your PIN to delete this trip",()=>{if(t.audio){if(VP.tripId===t.id)voiceRelease();vDelete(t.audio.id);}WBH("tripDeleted",t);S.trips=S.trips.filter(x=>x.id!==t.id);if(S.selId===t.id)S.selId=S.trips[0]?S.trips[0].id:null;S.confirmId=null;saveTrips();if(S.back&&S.back.G.id===t.id)backEnd();renderAll();})),mk("Keep","btn sm",()=>{S.confirmId=null;renderTrips();}));c.appendChild(q);}
+    c.addEventListener("click",e=>{if(e.target.closest("button,input,textarea"))return;pick(t.id);});
     box.appendChild(c);});
   if(!S.trips.length){const e=document.createElement("p");e.className="empty";e.textContent="No trips yet. Record your first one in Record.";box.appendChild(e);}
+  // the advert sits after the first trip, so people reach their own trips first
+  if(adSlot){const first=box.firstChild;if(first&&first.nextSibling)box.insertBefore(adSlot,first.nextSibling);else box.appendChild(adSlot);}
 }
 function dirLink(t){const e=t.points[t.points.length-1];const a=document.createElement("a");a.className="btn sm";a.target="_blank";a.rel="noopener";
   a.href="https://www.google.com/maps/dir/?api=1&destination="+e.lat.toFixed(5)+","+e.lon.toFixed(5);a.textContent="Directions";return a;}
@@ -855,8 +1032,10 @@ function lastTripPoint(){ // end of the most recent real trip in the last 12 hou
 function findMeLink(p){const a={lat:p.lat,lon:p.lon,t:p.t||Date.now()};return SITE+"#t="+encodeTrip({name:"SOS location "+fmtClock(a.t),created:a.t,points:[a,{...a,t:a.t+1000}],stops:[]});}
 let SOSLAST=null;
 function refreshSOS(){if(SOSLAST&&!$("share").hidden&&$("share").classList.contains("sos"))openSOS(SOSLAST[0],SOSLAST[1]);}
+function sosTrip(){if(!S.back||!S.back.G)return null;const g=S.trips.find(x=>x.id===S.back.G.id)||S.back.G;return noteOf(g)?g:null;}
 function sosMessage(p,state){
   let m="SOS from WakaBack: I NEED HELP.";
+  {const g=sosTrip();if(g&&SH.inc)m+="\nI was going: "+g.name+noteLine(g);}
   {const x=WBH("sosLine");if(x)m+="\n"+x;}
   if(p){const at=p.lat.toFixed(5)+","+p.lon.toFixed(5);
     m+=(p.fromTrip?"\nMy last known location (from my last WakaBack trip, "+fmtClock(p.t)+"): ":"\nMy location: ")+"https://maps.google.com/?q="+at+" ("+at+")"+(p.acc&&!p.fromTrip?" accurate to about "+Math.round(p.acc)+" m, "+fmtClock(p.t||Date.now()):"")+".";}
@@ -866,7 +1045,8 @@ function sosMessage(p,state){
   else if(p)m+="\nFind me with WakaBack: "+findMeLink(p);
   return m+"\nPlease call me. If you can't reach me, call 112.";}
 function openSOS(p,state){
-  SOSLAST=[p,state];const text=sosMessage(p,state);SH.text=text;
+  SOSLAST=[p,state];{const g=sosTrip();if(g)noteOption(g,"Add my note from “"+g.name+"”",()=>sosMessage(SOSLAST[0],SOSLAST[1]));else noteOption(null);}
+  const text=sosMessage(p,state);SH.text=text;
   $("share").classList.add("sos");$("sh-title").textContent="Send SOS";
   let sub=CONTACTS.length?"Tap Send by SMS, then press Send in your messages app.":"Add emergency contacts in Help so SOS goes straight to them. For now, pick who to send it to.";
   if(state==="finding")sub="Finding your location… You can already send, but waiting a few seconds adds where you are.";
@@ -891,9 +1071,9 @@ function triggerSOS(){
 setTimeout(()=>{const el=$("sosbtn");el.addEventListener("click",triggerSOS);},0);
 
 // ---------- "I've arrived" message ----------
-function arrivedMessage(t){const end=t.points[t.points.length-1];const at=end.lat.toFixed(5)+","+end.lon.toFixed(5);
-  return "I arrived safely at "+fmtClock(end.t)+" (WakaBack).\nI'm here: https://maps.google.com/?q="+at+" ("+at+")\nMy route: "+SITE+"#t="+encodeTrip(t);}
-function openArrived(t){const text=arrivedMessage(t);SH.text=text;$("share").classList.remove("sos");$("sh-call").hidden=true;
+function arrivedMessage(t,inc){const end=t.points[t.points.length-1];const at=end.lat.toFixed(5)+","+end.lon.toFixed(5);
+  return "I arrived safely at "+fmtClock(end.t)+" (WakaBack).\nI'm here: https://maps.google.com/?q="+at+" ("+at+")"+(inc?noteLine(t):"")+"\nMy route: "+SITE+"#t="+encodeTrip(t,inc);}
+function openArrived(t){SH.toContacts=true;noteOption(t,null,()=>arrivedMessage(t,SH.inc));const text=arrivedMessage(t,SH.inc);SH.text=text;$("share").classList.remove("sos");$("sh-call").hidden=true;
   $("sh-title").textContent="Tell family you arrived";$("sh-sub").textContent="So they know you're safe, and where you ended up.";
   $("sh-msg").textContent=text;$("sh-len").textContent=text.length+" characters, about "+Math.ceil(text.length/153)+" SMS";
   $("sh-sms").href=smsHref(text);$("sh-wa").href="https://wa.me/?text="+encodeURIComponent(text);
@@ -1125,7 +1305,113 @@ setTab(RECOVERED||S.openShared||S.sharedErr||S.trips.some(t=>!t.sample)?"trips":
 if(RECOVERED){$("importnote").className="note";$("importnote").textContent="WakaBack closed during a recording. Your route so far was saved as “"+RECOVERED.name+"”.";}
 if(S.openShared){$("importnote").className="note";$("importnote").textContent="Shared route added. Tap Replay to see it, or Go there again to follow it.";}
 if(S.sharedErr){$("importnote").className="note warn";$("importnote").textContent=S.sharedErr;}
-window.WBApp={S,saveTrips,mk,pick,vDelete,voiceRelease,saveTripsRaw:list=>{memStore=list;try{localStorage.setItem(KEY,JSON.stringify(list));}catch(e){}},renderAll,renderRec,renderAds,setTab,encodeTrip,decodeTrip,vGetAll,vPut,startGPS,recStart,recStop,openText,refreshSOS,
+// ---------- App lock (optional 4-digit PIN, works without data) ----------
+// Recovery code: shown once when App lock is turned on. It removes a forgotten PIN without data.
+const ALC="23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+function alMakeCode(){const r=new Uint8Array(12);try{crypto.getRandomValues(r);}catch(e){for(let i=0;i<12;i++)r[i]=Math.random()*256;}
+  let c="";for(let i=0;i<12;i++){c+=ALC[r[i]%ALC.length];if(i===3||i===7)c+="-";}return c;}
+const alNorm=c=>String(c||"").toUpperCase().replace(/[^0-9A-Z]/g,"").replace(/O/g,"0").replace(/[IL]/g,"1");
+async function alNewCode(then){const code=alMakeCode();const st=alStored();if(!st)return;
+  st.rs=Math.random().toString(36).slice(2);st.rh=await alHash(alNorm(code),st.rs);try{localStorage.setItem(ALKEY,JSON.stringify(st));}catch(e){}
+  AL.mode="code";AL.then=then||null;$("applock").hidden=false;document.documentElement.classList.remove("al-locked");
+  $("al-title").textContent="Write down your recovery code";const sub=$("al-sub");sub.hidden=false;
+  sub.innerHTML="If you ever forget your PIN, this code removes it, <b>even without data</b>. Write it on paper and keep it somewhere safe, not only on this phone. It's shown only now.";
+  $("al-pinbox").hidden=true;$("al-pwbox").hidden=true;$("al-rcbox").hidden=true;$("al-codebox").hidden=false;$("al-forgot").hidden=true;$("al-cancel").hidden=true;$("al-sos").hidden=true;
+  $("al-code").textContent=code;$("al-saved").checked=false;$("al-codedone").disabled=true;}
+$("al-saved").onchange=e=>{$("al-codedone").disabled=!e.target.checked;};
+$("al-codedone").onclick=()=>{const f=AL.then;alClose();renderAppLock();f&&f();};
+function alRemovePin(){try{localStorage.removeItem(ALKEY);}catch(e){}alSetFails(null);const f=AL.then;alClose();renderAppLock();f&&f();}
+$("al-rcgo").onclick=async()=>{const st=alStored();if(!st||!st.rh)return;
+  if(alWaitLeft()>0){$("al-rcerr").textContent="Too many wrong tries. Wait a little and try again.";return;}
+  const n=alNorm($("al-rc").value);if(n.length<12){$("al-rcerr").textContent="Type the whole code: 12 letters and numbers.";return;}
+  if(await alHash(n,st.rs)===st.rh){alRemovePin();return;}
+  const fl=alFails();fl.n++;if(fl.n>=5)fl.until=Date.now()+Math.min(30*60000,60000*Math.pow(2,fl.n-5));alSetFails(fl);
+  $("al-rcerr").textContent="That recovery code isn't right.";};
+$("al-usepw").onclick=()=>alShowPassword();
+
+// Asks for the PIN when WakaBack opens, after a minute away, and before a trip is deleted.
+// SOS always works from the lock screen. The PIN is stored only as a salted hash.
+const ALKEY="wayback.applock.v1",ALFKEY="wayback.applock.fails";
+const AL={mode:null,pin:"",first:"",then:null,cancel:null,awayAt:0,timer:null};
+function alStored(){try{return JSON.parse(localStorage.getItem(ALKEY)||"null");}catch(e){return null;}}
+function alOn(){return !!alStored();}
+async function alHash(pin,salt){
+  try{const k=await crypto.subtle.importKey("raw",new TextEncoder().encode(pin),"PBKDF2",false,["deriveBits"]);
+    const b=await crypto.subtle.deriveBits({name:"PBKDF2",salt:new TextEncoder().encode(salt),iterations:60000,hash:"SHA-256"},k,256);
+    return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,"0")).join("");}
+  catch(e){let h=2166136261;for(const ch of salt+":"+pin){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)>>>0;}return "f"+h.toString(16);}}
+function alFails(){try{return JSON.parse(localStorage.getItem(ALFKEY)||'{"n":0,"until":0}');}catch(e){return {n:0,until:0};}}
+function alSetFails(f){try{f?localStorage.setItem(ALFKEY,JSON.stringify(f)):localStorage.removeItem(ALFKEY);}catch(e){}}
+function alPremium(){const P=window.WBPremium&&window.WBPremium._state;return !!(P&&P.premium&&P.user);}
+function alBuildPad(){const pad=$("al-pad");if(pad.childElementCount)return;
+  ["1","2","3","4","5","6","7","8","9","","0","⌫"].forEach(k=>{const b=document.createElement("button");b.type="button";b.textContent=k;
+    if(!k)b.className="blank";b.setAttribute("aria-label",k==="⌫"?"Delete digit":k);b.onclick=()=>alKey(k);pad.appendChild(b);});}
+function alDots(){$("al-dots").querySelectorAll("i").forEach((d,i)=>d.classList.toggle("on",i<AL.pin.length));}
+function alWaitLeft(){const f=alFails();return Math.max(0,f.until-Date.now());}
+function alShowWait(){clearInterval(AL.timer);const tick=()=>{const ms=alWaitLeft();const dis=ms>0&&AL.mode!=="set1"&&AL.mode!=="set2";
+    $("al-pad").querySelectorAll("button").forEach(b=>b.disabled=dis);
+    if(dis){const m=Math.ceil(ms/1000);$("al-err").textContent="Too many wrong tries. Try again in "+(m>=60?Math.ceil(m/60)+" min":m+" s")+".";}
+    else if(/^Too many/.test($("al-err").textContent)){$("al-err").textContent="";clearInterval(AL.timer);}};
+  tick();AL.timer=setInterval(tick,1000);}
+function alOpen(mode,opts){opts=opts||{};AL.mode=mode;AL.pin="";AL.then=opts.then||null;AL.cancel=opts.cancel||null;alBuildPad();
+  if(mode==="open")document.querySelectorAll(".sheet:not([hidden])").forEach(x=>{if(!x.classList.contains("sos"))x.hidden=true;});
+  $("al-title").textContent=opts.title||"Enter your PIN";
+  const sub=$("al-sub");sub.hidden=!opts.sub;sub.innerHTML=opts.sub||"";
+  $("al-err").textContent="";$("al-pinbox").hidden=false;$("al-pwbox").hidden=true;$("al-codebox").hidden=true;$("al-rcbox").hidden=true;
+  $("al-cancel").hidden=mode==="open";$("al-forgot").hidden=!(mode==="open"||mode==="confirm");$("al-sos").hidden=false;
+  $("applock").hidden=false;document.documentElement.classList.remove("al-locked");alDots();alShowWait();}
+function alClose(){$("applock").hidden=true;AL.mode=null;AL.pin="";clearInterval(AL.timer);}
+async function alKey(k){if(!AL.mode)return;if(k==="⌫"){AL.pin=AL.pin.slice(0,-1);alDots();return;}
+  if(!/^\d$/.test(k)||AL.pin.length>=4)return;if((AL.mode==="open"||AL.mode==="confirm")&&alWaitLeft()>0)return;
+  AL.pin+=k;alDots();if(AL.pin.length<4)return;
+  const pin=AL.pin;await new Promise(r=>setTimeout(r,120));
+  if(AL.mode==="set1"){AL.first=pin;alOpen("set2",{title:"Type the same PIN again",then:AL.then,cancel:AL.cancel});return;}
+  if(AL.mode==="set2"){if(pin!==AL.first){AL.first="";alOpen("set1",{title:"The PINs didn't match. Choose a 4-digit PIN",sub:alSetupText(),then:AL.then,cancel:AL.cancel});return;}
+    const salt=Math.random().toString(36).slice(2)+Date.now().toString(36);const h=await alHash(pin,salt);
+    const old=alStored();const rec=old&&old.rh?{rs:old.rs,rh:old.rh}:null;
+    try{localStorage.setItem(ALKEY,JSON.stringify({v:1,salt,h,...(rec||{})}));}catch(e){}alSetFails(null);
+    if(rec){const f=AL.then;alClose();renderAppLock();f&&f();return;}
+    await alNewCode(AL.then);return;}
+  const st=alStored();if(!st){const f=AL.then;alClose();f&&f();return;}
+  if(await alHash(pin,st.salt)===st.h){alSetFails(null);const f=AL.then;alClose();f&&f();return;}
+  const fl=alFails();fl.n++;if(fl.n>=5)fl.until=Date.now()+Math.min(30*60000,60000*Math.pow(2,fl.n-5));alSetFails(fl);
+  AL.pin="";alDots();const d=$("al-dots");d.classList.remove("shake");void d.offsetWidth;d.classList.add("shake");
+  try{navigator.vibrate&&navigator.vibrate(150);}catch(e){}
+  $("al-err").textContent=fl.n>=5?"":"Wrong PIN."+(fl.n>=3?" "+(5-fl.n)+" more "+(5-fl.n===1?"try":"tries")+" before a wait.":"");alShowWait();}
+function alSetupText(){return "This PIN stops people opening WakaBack or deleting your trips. <b>It can't save your trips if your phone is lost, stolen or reset</b>: only Premium online backup can do that."+
+  " Next, you'll get a <b>recovery code</b> to write down. If you forget the PIN, the code removes it, even without data"+(alPremium()?" (or use your WakaBack account password).":". Keep it safe: without the PIN or the code, the only way back in deletes your trips.");}
+function withPin(title,fn){if(!alOn()){fn();return;}alOpen("confirm",{title,then:fn});}
+function lockNow(){if(alOn()&&AL.mode!=="open")alOpen("open",{title:"Enter your PIN"});}
+function renderAppLock(){const st=$("al-status"),bx=$("al-btns");if(!st)return;bx.innerHTML="";
+  if(alOn()){st.textContent="On. WakaBack asks for your PIN when it opens and before a trip is deleted. SOS always works without the PIN.";
+    bx.append(mk("New recovery code","btn sm",()=>withPin("Enter your PIN to make a new recovery code",()=>alNewCode(null))),mk("Change PIN","btn sm",()=>withPin("Enter your current PIN",()=>alOpen("set1",{title:"Choose a new 4-digit PIN",sub:alSetupText()}))),
+      mk("Turn off","btn sm danger",()=>withPin("Enter your PIN to turn off App lock",()=>{try{localStorage.removeItem(ALKEY);}catch(e){}alSetFails(null);renderAppLock();})));}
+  else{st.textContent="Off. Turn it on so nobody can open WakaBack or delete your trips without your 4-digit PIN. Works without data.";
+    bx.append(mk("Turn on App lock","btn sm primary",()=>alOpen("set1",{title:"Choose a 4-digit PIN",sub:alSetupText()})));}}
+$("al-cancel").onclick=()=>{const f=AL.cancel;alClose();f&&f();};
+$("al-sos").onclick=()=>triggerSOS();
+function alShowPassword(){$("al-title").textContent="Remove your PIN";const sub=$("al-sub");sub.hidden=false;sub.innerHTML="Type your WakaBack account password ("+(window.WBPremium._state.user.email||"")+"). Needs internet. Your PIN will be removed and you can set a new one in Help.";
+  $("al-pinbox").hidden=true;$("al-rcbox").hidden=true;$("al-pwbox").hidden=false;$("al-forgot").hidden=true;$("al-pw").value="";$("al-pwerr").textContent="";setTimeout(()=>$("al-pw").focus(),0);}
+$("al-forgot").onclick=()=>{const st=alStored();const sub=$("al-sub");sub.hidden=false;
+  if(st&&st.rh){$("al-title").textContent="Forgot your PIN?";
+    sub.innerHTML="Type the <b>recovery code</b> you wrote down when you turned on App lock. It works without data, and your trips stay safe.";
+    $("al-pinbox").hidden=true;$("al-pwbox").hidden=true;$("al-rcbox").hidden=false;$("al-forgot").hidden=true;$("al-rc").value="";$("al-rcerr").textContent="";
+    $("al-usepw").hidden=!alPremium();
+    if(!alPremium())sub.innerHTML+="<br><br>Lost the code too? The only way back in is to clear WakaBack's data in your phone's Settings, which <b>deletes your trips</b>.";
+    setTimeout(()=>$("al-rc").focus(),0);return;}
+  if(alPremium()){alShowPassword();return;}
+  sub.innerHTML="<b>There's no way to reset the PIN without an account.</b> If you can't remember it, the only way back in is to clear WakaBack's data in your phone's Settings (Apps → WakaBack → Storage → Clear data). <b>That deletes all your trips.</b><br><br>With Premium, your trips are backed up online and you can remove a forgotten PIN with your account password.";};
+$("al-pwgo").onclick=async()=>{const pw=$("al-pw").value;if(!pw){$("al-pwerr").textContent="Type your account password.";return;}
+  $("al-pwgo").disabled=true;$("al-pwerr").textContent="Checking…";
+  try{await window.WBPremium.checkPassword(pw);alRemovePin();}
+  catch(e){$("al-pwerr").textContent=/network|fetch|offline/i.test(String(e&&(e.code||e.message)))?"No internet. Connect and try again.":"That password isn't right.";}
+  $("al-pwgo").disabled=false;};
+document.addEventListener("keydown",e=>{if(!AL.mode||$("al-pinbox").hidden)return;if(/^\d$/.test(e.key)){alKey(e.key);e.preventDefault();}else if(e.key==="Backspace"){alKey("⌫");e.preventDefault();}});
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")AL.awayAt=Date.now();
+  else if(AL.awayAt&&Date.now()-AL.awayAt>60000)lockNow();});
+renderAppLock();if(alOn())lockNow();else document.documentElement.classList.remove("al-locked");
+
+window.WBApp={S,saveTrips,mk,pick,vDelete,voiceRelease,saveTripsRaw:list=>persistTrips(list),tripsReady,withPin,lockNow,kvGet,kvSet,storageWarn,renderAll,renderRec,renderAds,setTab,encodeTrip,decodeTrip,vGetAll,vPut,startGPS,recStart,recStop,openText,refreshSOS,
   fmtDist,fmtDur,fmtClock,fmtDate,pathLen,SITE,lastKnown,say,NATIVE,IS_ANDROID,$,get contacts(){return CONTACTS;},voiceConsentGiven:()=>{try{return localStorage.getItem("wayback.voiceconsent.v1")==="yes";}catch(e){return false;}}};
 WBH("ready",{});
 })();

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<title>WakaBack Private Trips Reset</title>
+<title>WakaBack Hidden Trips Reset</title>
 <style>
 :root{--bg:#eef1ec;--surface:#fff;--line:#d3dbd2;--fg:#14241c;--muted:#5b6b62;--accent:#1f6b47;--warn:#c2402a}
 @media (prefers-color-scheme:dark){:root{--bg:#0f1714;--surface:#16211c;--line:#2a3a32;--fg:#e6eee8;--muted:#97a89e;--accent:#4fbf86;--warn:#f07a62;color-scheme:dark}}
@@ -17,7 +17,7 @@ p{margin:0}.muted{color:var(--muted);font-size:.92rem}.ok{color:var(--accent);fo
 </head>
 <body>
 <div class="wrap"><div class="card">
-  <h1>Waka<span>Back</span> Private trips</h1>
+  <h1>Waka<span>Back</span> Hidden trips</h1>
   <p id="msg">Checking your link…</p>
   <p class="muted" id="sub"></p>
 </div></div>
@@ -35,9 +35,9 @@ window.addEventListener("hashchange",()=>location.reload());
     const r=await cloud.escrowLink(u,t,a==="cancel"?"cancel":"confirm");
     try{history.replaceState(null,"",location.pathname);}catch(e){}
     if(r.state==="cancelled")say("Reset cancelled.","ok","Your hidden trips stay locked with your current private password. If you didn't ask for the reset, change your WakaBack account password and your email password now.");
-    else if(r.state==="ready")say("Your reset is ready.","ok","Open WakaBack → Trips → 🔒 Private → “Forgot private password?” to set a new private password.");
+    else if(r.state==="ready")say("Your reset is ready.","ok","Open WakaBack → Trips → 🔒 Hidden trips → “Forgot private password?” to set a new private password.");
     else{const when=r.readyAt?new Date(r.readyAt).toLocaleString([],{weekday:"long",day:"numeric",month:"long",hour:"numeric",minute:"2-digit"}):"in 7 days";
-      say("Reset confirmed.","ok","For your safety you can set a new private password from "+when+". Open WakaBack → Trips → 🔒 Private → “Forgot private password?” then. We've emailed you a warning with a link to cancel, in case this wasn't you.");}
+      say("Reset confirmed.","ok","For your safety you can set a new private password from "+when+". Open WakaBack → Trips → 🔒 Hidden trips → “Forgot private password?” then. We've emailed you a warning with a link to cancel, in case this wasn't you.");}
   }catch(e){say("This link has expired or was already used.","bad","If you still need to reset, ask for a new link in WakaBack.");}
 })();
 </script>

@@ -1,6 +1,6 @@
 // WayBack offline helper. Saves the app on the phone so it opens with data off.
 // Change VERSION whenever index.html changes so phones pick up the update.
-const VERSION = "wakaback-2026-11-03-private1";
+const VERSION = "wakaback-2026-11-04-lanes1";
 const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png", "./premium.js", "./premium-config.js", "./cloud.js", "./live.html", "./vault.js", "./vault-reset.html"];
 
 self.addEventListener("install", e => {
