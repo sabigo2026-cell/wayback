@@ -134,6 +134,14 @@
         }
         h += `<div class="row"><button class="btn sm" id="pm-check" type="button">I've paid, check again</button></div>`;
       }
+      { const ls = myLinks().filter((l) => !l.deleted);
+        if (ls.length) h += `<div class="fields"><span style="font-weight:600;font-size:.88rem">Your live links</span>
+          <p class="note">Delete a link to stop it working for everyone who has it, even people it was forwarded to. You'll need your account password, and your family will be told. SOS links can't be deleted: they stay 7 days for your safety.</p>
+          ${ls.map((l) => `<div><div class="row" style="justify-content:space-between"><span class="note">${esc(l.name)} · ${new Date(l.at).toLocaleDateString([], { day: "numeric", month: "short" })}${P.live && P.live.id === l.id ? " · sharing now" : ""}</span>${isSosLink(l.id) ? `<span class="note">kept 7 days</span>` : `<button class="btn sm danger" type="button" data-lvdel="${esc(l.id)}">Delete</button>`}</div><div data-lvbox="${esc(l.id)}"></div></div>`).join("")}</div>`; }
+      { const ss = myShares();
+        if (ss.length) h += `<div class="fields"><span style="font-weight:600;font-size:.88rem">Your shared links</span>
+          <p class="note">Route links you sent with “Send a link I can cancel later”. Cancel one and it stops opening for everyone who has it. (Anyone who already opened it in WakaBack keeps the copy saved on their phone.)</p>
+          ${ss.map((x) => `<div class="row" style="justify-content:space-between"><span class="note">${esc(x.name)} · ${new Date(x.at).toLocaleDateString([], { day: "numeric", month: "short" })}</span><button class="btn sm danger" type="button" data-shdel="${esc(x.id)}">Cancel link</button></div>`).join("")}</div>`; }
       h += `<div class="row"><button class="btn sm" id="pm-signout" type="button">Sign out</button></div>
         <details><summary>Delete my account</summary>
           <div class="fields" style="margin-top:8px"><p class="note">This deletes your account, online backups and live links. Trips saved on this phone stay here.</p>
@@ -157,6 +165,13 @@
       busy(async () => { if (P.view === "signup") { await P.cloud.signUp(email, pw); P.msg = "Account created. We sent you an email to confirm your address."; } else { await P.cloud.signIn(email, pw); P.msg = "Signed in."; } }); };
     document.querySelectorAll("#acctsec [data-v]").forEach((b) => (b.onclick = () => { P.view = b.dataset.v; setMsg(); }));
     const on = (id, fn) => { const el = $(id); if (el) el.onclick = fn; };
+    $("acctsec").querySelectorAll("[data-lvdel]").forEach((bt) => { bt.onclick = () => { const id = bt.dataset.lvdel; const hold = $("acctsec").querySelector(`[data-lvbox="${id}"]`); askToDelete(hold, id, () => { P.msg = "Link deleted. It no longer works for anyone, and your family were told."; renderAcct(); }); }; });
+    $("acctsec").querySelectorAll("[data-shdel]").forEach((bt) => { bt.onclick = async () => {
+      if (bt.dataset.sure !== "1") { bt.dataset.sure = "1"; bt.textContent = "Tap again to cancel"; return; }
+      bt.disabled = true; bt.textContent = "Cancelling…";
+      try { await P.cloud.shareDelete(bt.dataset.shdel); forgetShare(bt.dataset.shdel); P.msg = "Link cancelled. It no longer opens for anyone."; P.err = ""; }
+      catch (e) { P.err = "No internet. Connect and try again."; }
+      renderAcct(); }; });
     on("pm-signout", () => busy(async () => { await P.cloud.signOut(); setPremium(false); P.msg = "Signed out. Your trips are still on this phone."; }));
     on("pm-reverify", () => busy(async () => { await P.cloud.sendVerify(); P.msg = "Email sent."; }));
     on("pm-checkverify", () => busy(async () => { P.user = await P.cloud.reloadUser(); P.msg = P.user && P.user.verified ? "Email confirmed." : "Not confirmed yet. Open the link in the email first."; }));
@@ -181,7 +196,9 @@
     renderAcct(); renderLive(); renderUpsell(); if (window.WBVault) WBVault.renderEntry();
     if (P.premium && !was) { syncNow(false); if (window.WBVault) WBVault.on("signedIn"); }
   }
-  const RC = () => (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Purchases) || null;
+  let RCP = null;
+  const RC = () => { const C = window.Capacitor; if (!C || !C.isNativePlatform || !C.isNativePlatform()) return null;
+    if (!RCP) { try { RCP = C.registerPlugin ? C.registerPlugin("Purchases") : (C.Plugins && C.Plugins.Purchases) || null; } catch (e) { RCP = (C.Plugins && C.Plugins.Purchases) || null; } } return RCP; };
   async function rcSetup() {
     const rc = RC(); if (!rc || !P.user) return;
     const key = A().IS_ANDROID ? CFG.revenuecat && CFG.revenuecat.android : CFG.revenuecat && CFG.revenuecat.ios;
@@ -208,7 +225,7 @@
   function syncSoon() { clearTimeout(syncTimer); syncTimer = setTimeout(() => syncNow(false), 4000); }
   async function syncNow(manual) {
     if (!P.premium || !P.user || P.sync.busy || (window.WBVault && WBVault.isOpen())) return;
-    P.sync.busy = true; P.sync.err = ""; renderAcct();
+    P.sync.busy = true; P.sync.err = ""; P.sync.tryAt = Date.now(); renderAcct(); renderUpsell();
     const app = A(); let changed = false;
     try {
       if (app.tripsReady) await app.tripsReady;
@@ -242,8 +259,9 @@
       if (changed) { app.S.trips.sort((a, b) => (b.created || 0) - (a.created || 0)); app.saveTrips(); app.renderAll(); }
       P.sync.last = Date.now(); save(YKEY, String(P.sync.last));
       if (manual) P.msg = "Backup complete.";
-    } catch (e) { P.sync.err = /network|fetch|offline/i.test(String(e && (e.code || e.message))) ? "Backup will continue when you have data." : "Backup didn't finish. It will try again."; console.warn(e); }
-    P.sync.busy = false; renderAcct();
+    } catch (e) { if (changed) { try { app.saveTrips(); } catch (x) {} } // keep what was already backed up
+      P.sync.err = /network|fetch|offline/i.test(String(e && (e.code || e.message))) ? "Backup will continue when you have data." : "Backup didn't finish. It will try again."; console.warn(e); }
+    P.sync.busy = false; renderAcct(); renderUpsell();
   }
   async function fetchVoice(t) { // voice for a trip restored from backup
     if (!P.premium || !P.user || !t.audio) return false;
@@ -266,9 +284,21 @@
       const sos = P.live.status === "sos";
       box.innerHTML = `<div class="livebar${sos ? " sos" : ""}"><span class="rec">${sos ? "SOS live link is on" : "Sharing live"}${P.live.voice ? " · with voice" : ""}</span>
         <span class="note" id="lv-status">${P.live.lastSent ? "Last update sent " + ago(P.live.lastSent) : "Waiting for data to send the first update…"}${P.live.pending.length > 40 ? " · no data now, updates will catch up" : ""}</span>
-        <div class="row"><button class="btn sm" id="lv-again" type="button">Send link again</button><button class="btn sm danger" id="lv-stop" type="button">Stop sharing</button></div></div>`;
+        <div class="row"><button class="btn sm" id="lv-again" type="button">Send link again</button>${P.live.status === "sos" || P.live.wasSos ? "" : `<button class="btn sm" id="lv-new" type="button">🔄 New link</button>`}<button class="btn sm danger" id="lv-stop" type="button">Stop sharing</button></div><div id="lv-newbox"></div></div>`;
       $("lv-again").onclick = () => openLiveMessage();
+      if ($("lv-new")) $("lv-new").onclick = () => askPassword($("lv-newbox"),
+        "Get a new link for this trip. The old link stops working at once for everyone who has it, even people it was forwarded to. Your saved family emails get the new link. Type your WakaBack account password:",
+        "Make new link", async () => { await newLiveLink(); });
       $("lv-stop").onclick = () => endLive("stopped");
+      return;
+    }
+    if (P.justEnded) {
+      const sos = isSosLink(P.justEnded);
+      box.innerHTML = `<div class="livebar"><span class="rec" style="color:var(--fg)">Live sharing stopped</span>
+        <span class="note">${sos ? "This was an SOS link, so it stays for 7 days for your safety, then disappears by itself." : "Anyone with the link (even if it was forwarded) can still see where you went until it expires in 7 days."}</span>
+        <div class="row">${sos ? "" : `<button class="btn sm danger" id="lv-del" type="button">Delete link now</button>`}<button class="btn sm" id="lv-keep" type="button">OK</button></div><div id="lv-delbox"></div></div>`;
+      if (!sos) $("lv-del").onclick = () => askToDelete($("lv-delbox"), P.justEnded, () => { const bx = $("livebox"); if (bx) bx.innerHTML = `<p class="note">Link deleted. It no longer works for anyone, and your family were told.</p>`; });
+      $("lv-keep").onclick = () => { P.justEnded = null; renderLive(); };
       return;
     }
     if (!rec || rec.demo) { box.innerHTML = ""; return; }
@@ -304,6 +334,7 @@
     persistLive(); renderLive();
     const data = { owner: P.user.uid, who: o.who, status: o.status, startedAt: now, lastAt: now, last, expectedArrival: o.eta, voice: !!o.voice,
       overdueAlerted: false, silentAlerted: false, expireAt: now + 30 * DAY, alertEmails: (P.settings.emails || []).slice(0, 3), tz: (Intl.DateTimeFormat().resolvedOptions().timeZone || "") };
+    rememberLink({ id, name: o.status === "sos" ? "SOS" : (rec && rec.name) || "Live trip", at: now, sos: o.status === "sos" });
     try { await P.cloud.liveCreate(id, data); P.live.created = true; persistLive(); } catch (e) { P.live.createData = data; persistLive(); }
     if (P.live.voice && P.live.audioId) uploadExistingVoice(P.live.audioId);
     flushLive(true);
@@ -334,12 +365,97 @@
   async function uploadExistingVoice(audioId) {
     try { const rows = await A().vGetAll(audioId); rows.forEach((r) => P.live && P.live.uploads.push({ part: { seg: r.seg, c: r.c, start: r.start, mime: r.mime }, blob: r.blob })); flushLive(true); } catch (e) {}
   }
+  // My recent live links, so any of them can be deleted for everyone (Help → Premium, or right after stopping).
+  const MKEY = "wayback.live.mine";
+  const myLinks = () => { try { return (JSON.parse(localStorage.getItem(MKEY) || "[]") || []).filter((l) => Date.now() - l.at < 31 * DAY); } catch (e) { return []; } };
+  function rememberLink(l) { const a = myLinks().filter((x) => x.id !== l.id); a.unshift(l); save(MKEY, a.slice(0, 20)); try { renderAcct(); } catch (e) {} }
+  // Deleting: the link stops working at once for everyone who has it (even if it was forwarded);
+  // the server then removes the points, voice and the link itself.
+  const isSosLink = (id) => (P.live && P.live.id === id && (P.live.status === "sos" || P.live.wasSos)) || myLinks().some((l) => l.id === id && l.sos);
+  // Ask for the account password first (a thief usually doesn't know it), then act.
+  function askPassword(holder, intro, label, action) {
+    holder.innerHTML = `<div class="fields" style="margin-top:6px"><p class="note">${intro}</p>
+      <input type="password" class="lv-pw" placeholder="Account password" aria-label="Account password" autocomplete="current-password">
+      <p class="note lv-err" style="color:var(--warn)"></p>
+      <div class="row"><button class="btn sm danger lv-go" type="button">${label}</button><button class="btn sm lv-no" type="button">Cancel</button></div></div>`;
+    const pw = holder.querySelector(".lv-pw"), er = holder.querySelector(".lv-err"), go = holder.querySelector(".lv-go");
+    holder.querySelector(".lv-no").onclick = () => { holder.innerHTML = ""; };
+    go.onclick = async () => {
+      if (!pw.value) { er.textContent = "Type your password."; return; }
+      go.disabled = true; er.textContent = "Checking…";
+      try { await P.cloud.signIn(P.user.email, pw.value); }
+      catch (e) { go.disabled = false; er.textContent = /network|fetch|offline|unavailable/i.test(String(e && (e.code || e.message))) ? "No internet. Connect and try again." : "That password isn't right."; return; }
+      try { await action(); } catch (e) { go.disabled = false; er.textContent = "Something went wrong. Try again."; }
+    };
+    setTimeout(() => pw.focus(), 0);
+  }
+  function askToDelete(holder, id, done) {
+    if (isSosLink(id)) { holder.innerHTML = `<p class="note">SOS links can't be deleted. They stay for 7 days for your safety, then disappear by themselves.</p>`; return; }
+    askPassword(holder, "To delete this link for everyone, type your WakaBack account password. Your family will get an email saying it was deleted, with your last known location.",
+      "Delete for everyone", async () => { await deleteLink(id); if (done) done(); });
+  }
+  // New link for the trip being shared: the old one dies at once; saved family emails get the new one.
+  async function newLiveLink() {
+    const old = P.live; if (!old || old.status === "sos" || old.wasSos) return;
+    P.live = null; persistLive();
+    await startLive({ who: old.who, eta: old.eta, voice: old.voice, status: old.status });
+    const nid = P.live && P.live.id; const now = Date.now(); let q = []; try { q = JSON.parse(localStorage.getItem(EKEY) || "[]"); } catch (e) {}
+    q.push({ id: old.id, fields: { status: "deleted", voice: false, deletedAt: now, lastAt: now, expireAt: now, replacedBy: nid } }); save(EKEY, q);
+    save(MKEY, myLinks().map((l) => l.id === old.id ? { ...l, deleted: true } : l));
+    await retryEnds(); renderLive(); renderAcct();
+    const nb = $("lv-newbox"); if (nb) nb.innerHTML = `<p class="note">✓ New link ready. The old one no longer works. Send the new link to anyone who should still follow you.</p>`;
+    openLiveMessage();
+  }
+  // ---- Premium route shares that can be cancelled ----
+  const SHKEY = "wayback.shares.mine";
+  const myShares = () => { try { return JSON.parse(localStorage.getItem(SHKEY) || "[]") || []; } catch (e) { return []; } };
+  function rememberShare(x) { save(SHKEY, [x].concat(myShares().filter((s) => s.id !== x.id)).slice(0, 50)); }
+  function forgetShare(id) { save(SHKEY, myShares().filter((s) => s.id !== id)); }
+  function shareOption({ t, live }) {
+    const box = $("sh-cancelopt"); if (!box) return;
+    if (!ON || !P.cloud || !P.user || !P.premium || !t || !t.points || t.points.length < 2) { box.hidden = true; return; }
+    box.hidden = false; let made = null;
+    box.innerHTML = `<label class="shnote"><input type="checkbox" id="sh-cancel"><span>🔒 Send a link I can cancel later <span class="note">(Premium · needs data)</span></span></label><p class="note" id="sh-cancelnote"></p>`;
+    const cb = $("sh-cancel"), note = $("sh-cancelnote"), app = A();
+    const make = async () => {
+      if (!cb.checked) { app.setShareCid(null); note.textContent = ""; return; }
+      note.textContent = "Saving the route online…";
+      try {
+        if (made) { const old = made; made = null; forgetShare(old); P.cloud.shareDelete(old).catch(() => {}); } // the note choice changed: replace the unsent link
+        const id = P.cloud.newShareId(); const st = app.shareState();
+        await P.cloud.shareCreate(id, { owner: P.user.uid, name: String(t.name || "Trip").slice(0, 80), code: app.encodeTrip(t, st.inc), createdAt: Date.now() });
+        made = id; rememberShare({ id, name: String(t.name || "Trip"), at: Date.now() });
+        if (!cb.checked) return; app.setShareCid(id);
+        note.textContent = "✓ This message has a link you can cancel any time in Help → Your shared links. (It needs data to open.)";
+      } catch (e) {
+        cb.checked = false; app.setShareCid(null);
+        note.textContent = /network|offline|fetch|unavailable/i.test(String(e && (e.code || e.message))) ? "No internet. Connect and try again, or send the normal message." : "Couldn't save the link. Try again.";
+      }
+    };
+    cb.onchange = make;
+    const nt = $("sh-note"); if (nt) nt.onchange = () => { if (cb.checked) setTimeout(make, 0); };
+  }
+  async function shareGet(id) {
+    if (!ON) throw new Error("unavailable");
+    for (let k = 0; !P.cloud && k < 60; k++) await new Promise((r) => setTimeout(r, 250));
+    if (!P.cloud) throw new Error("unavailable");
+    return P.cloud.shareGet(id);
+  }
+  async function deleteLink(id) {
+    if (isSosLink(id)) return false;
+    if (P.live && P.live.id === id) { P.live = null; persistLive(); }
+    const now = Date.now(); let q = []; try { q = JSON.parse(localStorage.getItem(EKEY) || "[]"); } catch (e) {}
+    q.push({ id, fields: { status: "deleted", voice: false, deletedAt: now, lastAt: now, expireAt: now } }); save(EKEY, q);
+    save(MKEY, myLinks().map((l) => l.id === id ? { ...l, deleted: true } : l));
+    if (P.justEnded === id) P.justEnded = null;
+    await retryEnds(); renderLive(); renderAcct();
+  }
   // Ending is retried until it reaches the server, so the link always switches to "arrived".
   const EKEY = "wayback.live.ending";
   async function endLive(why) {
     const L = P.live; if (!L) return;
     try { L.flushAt = 0; await flushLive(true); } catch (e) {}
-    P.live = null; persistLive(); renderLive();
+    P.live = null; persistLive(); P.justEnded = why === "account deleted" ? null : L.id; renderLive();
     const now = Date.now(); const end = { id: L.id, fields: { status: "ended", endedAt: now, lastAt: now, expireAt: now + 7 * DAY } };
     let q = []; try { q = JSON.parse(localStorage.getItem(EKEY) || "[]"); } catch (e) {}
     q.push(end); save(EKEY, q); retryEnds();
@@ -350,14 +466,14 @@
     for (const e of q) { try { await P.cloud.liveUpdate(e.id, e.fields); } catch (err) { left.push(e); } }
     save(EKEY, left.length ? left : null);
   }
-  setInterval(() => { if (P.live) { flushLive(false); renderLiveStatus(); } if (P.cloud) retryEnds(); if (P.premium && navigator.onLine !== false && Date.now() - P.sync.last > 10 * MIN) syncNow(false); }, 5000);
+  setInterval(() => { if (P.live) { flushLive(false); renderLiveStatus(); } if (P.cloud) retryEnds(); if (P.premium && navigator.onLine !== false && Date.now() - P.sync.last > 10 * MIN && Date.now() - (P.sync.tryAt || 0) > MIN) syncNow(false); }, 5000);
   window.addEventListener("online", () => { if (P.live) flushLive(true); retryEnds(); syncSoon(); });
 
   // ---------- SOS (Premium): live link + voice, automatically ----------
   async function onSOS() {
     if (!canLive()) return;
     const app = A();
-    if (P.live) { if (P.live.status !== "sos") { P.live.status = "sos"; persistLive(); renderLive(); flushLive(true); } app.refreshSOS(); return; }
+    if (P.live) { if (P.live.status !== "sos") { P.live.status = "sos"; P.live.wasSos = true; persistLive(); save(MKEY, myLinks().map((l) => l.id === P.live.id ? { ...l, sos: true } : l)); renderLive(); flushLive(true); } app.refreshSOS(); return; }
     if (!app.S.rec) {
       const vb = $("recvoice"); if (vb) vb.checked = !!P.settings.sosVoice;
       app.recStart(false);
@@ -371,6 +487,21 @@
   // ---------- small upsell on Trips for people without backup ----------
   function renderUpsell() {
     const v = $("v-trips"); if (!v) return; let u = $("pm-upsell");
+    // Premium: backup status on the Trips screen (backing up / all backed up / paused, with Try again).
+    if (P.premium && P.user) {
+      const app = A(); const real = (app.S.trips || []).filter((t) => !t.sample && !t.private);
+      if (!real.length || (window.WBVault && WBVault.isOpen())) { if (u) u.remove(); return; }
+      if (!u) { u = document.createElement("div"); u.id = "pm-upsell"; v.insertBefore(u, v.firstChild); }
+      const waiting = real.filter((t) => !t.cloudAt || t.cloudDirty).length;
+      let cls = "upsell", txt, btn = "";
+      if (P.sync.busy) txt = `☁️ Backing up${waiting ? " " + waiting + " trip" + (waiting === 1 ? "" : "s") : ""}…`;
+      else if (P.sync.err) { cls = "upsell warnbox"; txt = "⚠️ " + esc(P.sync.err) + (waiting ? ` ${waiting} trip${waiting === 1 ? " is" : "s are"} waiting.` : ""); btn = `<button class="btn sm" type="button" id="pm-syncnow">Try again</button>`; }
+      else if (waiting) txt = `⏳ ${waiting} trip${waiting === 1 ? "" : "s"} waiting to back up. It will happen automatically when you have data.`, btn = `<button class="btn sm" type="button" id="pm-syncnow">Back up now</button>`;
+      else txt = `☁️ ${real.length === 1 ? "Your trip is" : "All " + real.length + " trips are"} backed up${P.sync.last ? " · " + (Date.now() - P.sync.last < 60000 ? "just now" : ago(P.sync.last)) : ""}.`;
+      u.className = cls; u.innerHTML = `<span>${txt}</span>${btn}`;
+      const sb = $("pm-syncnow"); if (sb) sb.onclick = () => { P.sync.tryAt = 0; syncNow(true); };
+      return;
+    }
     // Free users: a standing reminder that their trips live only on this phone.
     const show = !P.premium && (A().S.trips || []).some((t) => !t.sample);
     if (!show) { if (u) u.remove(); return; }
@@ -383,11 +514,13 @@
   // ---------- hooks from the app ----------
   const hooks = {
     ready: () => { renderAcct(); renderLive(); renderUpsell(); },
+    shareOpen: (d) => { try { shareOption(d || {}); } catch (e) { console.warn(e); } },
     recStart: () => { renderLive(); if (P.live && !P.live.audioId) { const r = A().S.rec; if (r && r.voice) P.live.audioId = r.voice.id; } },
     recFix: (p) => { if (!P.live) return; P.live.pending.push([p.lat, p.lon, p.t]); P.live.last = { lat: p.lat, lon: p.lon, acc: p.acc || null, t: p.t }; if (P.live.pending.length % 10 === 0) persistLive(); flushLive(false); },
     voiceChunk: (d) => { if (P.live && P.live.voice && (!P.live.audioId || P.live.audioId === d.audioId)) { P.live.audioId = d.audioId; P.live.uploads.push({ part: { seg: d.seg, c: d.c, start: d.start, mime: d.mime }, blob: d.blob }); flushLive(false); } },
     recStopped: () => { if (P.live) endLive("trip ended"); renderLive(); },
     tripSaved: (t) => { renderUpsell(); if (P.premium) syncSoon(); },
+    tripEdited: (t) => { renderUpsell(); if (P.premium) syncSoon(); },
     tripDeleted: (t) => { if (P.premium && P.user && t.cloudAt) P.cloud.deleteTrip(t.id, t.audio && t.audio.id).catch(() => {}); setTimeout(renderUpsell, 0); },
     sos: () => { onSOS(); },
     sosLine: () => (P.live ? (P.live.voice ? "Live location and voice: " : "Live location: ") + liveLink(P.live.id) : ""),
@@ -398,7 +531,7 @@
     const V = window.WBVault; let r;
     if (V && V.on) { r = V.on(n, d); if (r !== undefined && !SHARED[n]) return r; }
     return hooks[n] ? hooks[n](d) : r;
-  }, fetchVoice, sync: () => syncNow(false), enabled: ON, perksHTML,
+  }, fetchVoice, sync: () => syncNow(false), enabled: ON, perksHTML, shareGet,
     // App lock "Forgot PIN?": proves the account password (needs internet)
     checkPassword: async (pw) => { if (!P.cloud || !P.user || !P.user.email) throw new Error("not signed in"); await P.cloud.signIn(P.user.email, pw); return true; },
     _state: P };
@@ -407,6 +540,7 @@
   function boot() {
     if (!window.WBApp) return setTimeout(boot, 50);
     hooks.ready();
+    { const hb = $("helpbtn"); if (hb) hb.addEventListener("click", () => { if (!P.busy) { try { renderAcct(); } catch (e) {} } }); }
     if (A().tripsReady) A().tripsReady.then(() => renderUpsell());
     if (!ON) return;
     if (P.live && !A().S.rec) { // the app closed while sharing live

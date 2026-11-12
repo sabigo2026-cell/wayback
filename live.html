@@ -84,7 +84,7 @@ const $=id=>document.getElementById(id);
 const CFG=window.WAKA_CONFIG||{};const MIN=6e4;
 const id=(decodeURIComponent(location.hash||"").match(/[#&]s=([A-Za-z0-9]+)/)||[])[1];
 const APP=new URL("./",location.href).href;
-let cloud=null,doc=null,pts=[],nLoaded=-1,parts=[],playing=false,pt=0,raf=0,lastReal=0;
+let cloud=null,doc=null,deleted=false,pts=[],nLoaded=-1,parts=[],playing=false,pt=0,raf=0,lastReal=0;
 const fmtClock=t=>new Date(t).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});
 const ago=ms=>{const s=Math.max(0,Math.round((Date.now()-ms)/1000));return s<60?s+" s ago":s<3600?Math.round(s/60)+" min ago":Math.round(s/3600)+" h ago";};
 const R=6371000,rad=d=>d*Math.PI/180;
@@ -97,7 +97,7 @@ try{cloud=window.WBCloud.create(CFG);}catch(e){$("who").textContent="Connect to 
 // ---- status ----
 function render(){
   const b=$("banner");
-  if(!doc){$("who").textContent="This live trip has ended or the link has expired.";$("pill").textContent="Not available";$("pill").className="pill warn";b.hidden=true;return;}
+  if(!doc){$("who").textContent=deleted?"The person who shared this link has deleted it.":"This live link has expired or was deleted by the person who shared it.";$("pill").textContent="Not available";$("pill").className="pill warn";b.hidden=true;return;}
   const now=Date.now(),who=doc.who||"Your family member";
   $("who").textContent=who+(doc.status==="ended"?"'s trip":" is on a trip");document.title=who+" · WakaBack Live";
   $("s-seen").textContent=doc.lastAt?ago(doc.lastAt):"—";
@@ -176,7 +176,9 @@ $("nf").onsubmit=async e=>{e.preventDefault();const em=$("nf-email").value.trim(
   catch(x){$("nf-msg").textContent="Couldn't save that. Check your internet and try again.";}};
 
 // ---- live updates ----
-async function onDoc(d){doc=d;if(d&&(d.lastAt||0)!==nLoaded){nLoaded=d.lastAt||0;try{pts=await cloud.livePoints(id);}catch(e){}if(d.voice)loadParts();}render();}
+async function onDoc(d){
+  if(d&&d.status==="deleted"){deleted=true;d=null;pts=[];parts=[];try{draw();}catch(e){}}
+  doc=d;if(d&&(d.lastAt||0)!==nLoaded){nLoaded=d.lastAt||0;try{pts=await cloud.livePoints(id);}catch(e){}if(d.voice)loadParts();}render();}
 cloud.liveWatch(id,onDoc);setInterval(render,15000);
 })();
 </script>

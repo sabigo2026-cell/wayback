@@ -173,7 +173,14 @@ a.adlink:active .ad{transform:scale(.99)}
 @media (prefers-reduced-motion:reduce){.dot.live,.vbanner .rec::before{animation:none}}
 </style>
 <style>html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}img{max-width:100%}body{margin:0;-webkit-tap-highlight-color:transparent;user-select:none}textarea,input,.code{user-select:text}</style>
-<script>try{if(localStorage.getItem("wayback.applock.v1"))document.documentElement.classList.add("al-locked");}catch(e){}</script>
+<script>try{if(localStorage.getItem("wayback.applock.v1"))document.documentElement.classList.add("al-locked");}catch(e){}
+// Shows any startup error on screen so testers can screenshot it (instead of a silent, frozen app).
+window.WB_ERRORS=[];window.onerror=function(msg,src,line,col){try{if(/ResizeObserver loop/.test(String(msg)))return;
+  var t=String(msg)+" ("+String(src||"").split("/").pop()+":"+line+":"+col+")";window.WB_ERRORS.push(t);
+  var b=document.getElementById("wberr");if(!b){b=document.createElement("div");b.id="wberr";
+  b.style.cssText="position:fixed;left:8px;right:8px;bottom:8px;z-index:99;background:#b3261e;color:#fff;font:13px/1.4 monospace;padding:10px;border-radius:10px;max-height:40vh;overflow:auto;white-space:pre-wrap";
+  (document.body||document.documentElement).appendChild(b);}
+  b.textContent="WakaBack error (please screenshot this):\n"+window.WB_ERRORS.join("\n")+"\n"+navigator.userAgent;}catch(e){}};</script>
 </head>
 <body>
 <div class="app">
@@ -188,7 +195,8 @@ a.adlink:active .ad{transform:scale(.99)}
     <div class="mapctl">
       <button id="zin" aria-label="Zoom in">+</button>
       <button id="zout" aria-label="Zoom out">−</button>
-      <button id="zfit" aria-label="Fit route">⤢</button>
+      <button id="zfit" aria-label="Show the whole route">⤢</button>
+      <button id="zfollow" aria-label="Map turns with you" aria-pressed="true" hidden>🧭</button>
     </div>
   </div>
 
@@ -382,6 +390,7 @@ a.adlink:active .ad{transform:scale(.99)}
     <p class="note" id="sh-sub"></p>
     <div class="code" id="sh-msg" style="max-height:150px;white-space:pre-wrap"></div>
     <span class="note" id="sh-len"></span>
+    <div id="sh-cancelopt" hidden></div>
     <label class="shnote" id="sh-noteopt" hidden><input type="checkbox" id="sh-note"><span id="sh-notelbl">Include my note</span></label>
     <div class="row">
       <a class="btn primary" id="sh-sms" href="#">Send by SMS</a>
@@ -411,6 +420,7 @@ a.adlink:active .ad{transform:scale(.99)}
   </div>
 </div>
 
+<script src="capacitor.js"></script>
 <script>
 (function(){
 "use strict";
@@ -555,7 +565,24 @@ async function wake(on){try{if(on&&!wl&&navigator.wakeLock){wl=await navigator.w
 // In the phone app, GPS runs through the native background plugin so recording
 // and guidance keep going with the screen off or the app in the background.
 const NATIVE=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());
-const BG=NATIVE?window.Capacitor.registerPlugin("BackgroundGeolocation"):null;
+const CAPREG=n=>{try{return NATIVE&&window.Capacitor.registerPlugin?window.Capacitor.registerPlugin(n):null;}catch(e){console.warn(e);return null;}};
+const BG=CAPREG("BackgroundGeolocation");
+// Phone app: open outside links (WhatsApp, SMS, phone calls, web pages) with Android's own
+// intents through WakaNative (android/app/.../WakaNativePlugin.java), so they can't crash the app.
+const WN=CAPREG("WakaNative");
+if(NATIVE&&WN){
+  document.addEventListener("click",e=>{const a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(!a)return;
+    const h=a.getAttribute("href")||"";if(!/^(https?:|sms:|smsto:|tel:|mailto:|geo:)/i.test(h))return;
+    e.preventDefault();
+    if(a.id==="sh-wa"){const text=SH.text;WN.shareText({text,package:"com.whatsapp"}).catch(()=>WN.shareText({text,package:"com.whatsapp.w4b"})).catch(()=>WN.shareText({text})).catch(()=>{});return;}
+    WN.openUrl({url:h}).catch(()=>{if(/^sms/i.test(h)){let body="";try{body=decodeURIComponent((h.split(/[?&]body=/)[1]||""));}catch(err){}WN.shareText({text:body}).catch(()=>{});}});
+  },true);
+  // show why the app closed last time, if it crashed
+  WN.lastCrash().then(r=>{if(r&&r.crash&&window.onerror)window.onerror("WakaBack closed unexpectedly last time:\n"+r.crash,"",0,0);}).catch(()=>{});
+}
+// The Record hint: the phone app records with the screen off and without data; the browser version can't.
+if(NATIVE){try{$("recnote").textContent="Start recording, then lock your phone and put it in your pocket. WakaBack keeps recording with the screen off and needs no data or network. It saves a point every few metres and marks where you stop for a minute or more. Everything stays on your phone.";}catch(e){}}
+else{try{$("recnote").textContent="Browser version: keep the screen on while you record. (The Play Store app keeps recording with the screen off.) No data needed once the page has opened. WakaBack saves a point every few metres and marks where you stop for a minute or more. Everything stays on your phone.";}catch(e){}}
 function startNativeGPS(onFix,onErr,purpose){
   let id=null,stopped=false;
   BG.addWatcher({
@@ -592,7 +619,7 @@ function recStart(demo){
   if(demo){const shift=S.trips.length*0.0011;const o={lat:ORIGIN.lat+shift,lon:ORIGIN.lon-shift};const path=wpToLatLon(o,[[0,0],[60,80],[70,210],[190,260],[230,390],[330,430]]);
     S.rec.src=startSim(genFixes(path,{t0:Date.now(),pauses:{3:120000}}),onFix,()=>{$("recnote").textContent="Demo walk finished. Tap “Stop and save” to keep it.";});}
   else S.rec.src=startGPS(onFix,msg=>{if(!S.rec)return;$("recnote").textContent=msg;$("recnote").className="note warn";if(/blocked|can't read/i.test(msg)&&!S.rec.B.points.length){recCancel();}});
-  wake(true);S.zoom=1;setTab("record");renderRec();WBH("recStart",{demo});
+  S.hdLast=null;S.fsc=0;wake(true);S.zoom=1;setTab("record");renderRec();WBH("recStart",{demo});
 }
 function recCancel(){if(!S.rec)return;clearSnap();WBH("recStopped",null);{const v=voiceStop(S.rec.voice);if(v)vDelete(v.id);}S.rec.src&&S.rec.src.stop();S.rec=null;wake(false);renderRec();draw();}
 function recStop(){
@@ -782,7 +809,7 @@ function backStart(demo){
   const onFix=p=>{const b=S.back;if(!b||b.arrived)return;if(p.acc&&p.acc>50)return;if(/^Can't get a GPS fix/.test($("bk-note").textContent)){$("bk-note").className="note";$("bk-note").textContent="GPS found. Guiding you now.";}b.cur=p;if(b.startT===null)b.startT=p.t;b.lastT=p.t;b.trail.push(p);b.g=laneAdjust(b,guide(b.G,p),p);if(b.g.remain<15&&b.g.off<25){b.arrived=true;b.src&&b.src.stop();wake(false);}voiceUpdate(b);guideVoice(b);checkBattery();renderBack();draw();};
   if(demo){S.back.src=startSim(genFixes(G.path,{t0:Date.now(),speed:1.4,dev:[0.42,0.58,48]}),onFix);}
   else S.back.src=startGPS(onFix,msg=>{if(!S.back)return;$("bk-note").textContent=msg;$("bk-note").className="note warn";if(/blocked|can't read/i.test(msg)&&!S.back.trail.length)backEnd();},"back");
-  wake(true);S.zoom=1;setTab("back");renderBack();}
+  S.hdLast=null;S.fsc=0;wake(true);S.zoom=1;setTab("back");renderBack();}
 function backEnd(){if(S.back&&S.back.src)S.back.src.stop();voicePause();S.back=null;wake(false);renderBack();draw();}
 function renderBack(){
   const t=sel();$("bk-empty").hidden=!!t;$("bk-body").hidden=!t;if(!t)return;
@@ -813,7 +840,7 @@ function renderBack(){
 const VKEY="wayback.voice";
 const VOICE={on:true};
 try{if(localStorage.getItem(VKEY)==="off")VOICE.on=false;}catch(e){}
-const TTS=NATIVE?window.Capacitor.registerPlugin("TextToSpeech"):null;
+const TTS=CAPREG("TextToSpeech");
 const LANG=(navigator.language&&/^en/i.test(navigator.language))?navigator.language:"en-GB";
 function say(text,flush){
   if(!VOICE.on||!text)return;
@@ -885,16 +912,17 @@ function decodeTrip(input){
   const stops=[];for(let i=0;i+3<st.length;i+=4){const f=t0+st[i+2]*1000;stops.push({lat:(Math.round(points[0].lat*1e5)+st[i])/1e5,lon:(Math.round(points[0].lon*1e5)+st[i+1])/1e5,from:f,to:f+st[i+3]*1000});}
   const out={id:"t"+Date.now(),name,created:t0,shared:true,points,stops};if(note)out.note=note;return out;}
 function noteLine(t){const n=noteOf(t);return n?"\nNote: "+n:"";}
-function shareMessage(t,live,inc){
-  const code=encodeTrip(t,inc);const end=t.points[t.points.length-1];const st=tripStats(t);
+function shareMessage(t,live,inc,cid){
+  const code=cid?"":encodeTrip(t,inc);const end=t.points[t.points.length-1];const st=tripStats(t);
   const at=end.lat.toFixed(5)+","+end.lon.toFixed(5);
   return (live?"I'm sharing my route so far with WakaBack.":"My route with WakaBack: "+t.name+".")+
     "\n"+(live?"I'm here now":"It ends here")+": https://maps.google.com/?q="+at+" ("+at+")"+
     "\nRoute: "+fmtDist(st.d)+", "+fmtDur(st.dur)+", "+fmtClock(end.t)+(inc?noteLine(t):"")+
+    (cid?"\nFollow it in WakaBack: "+SITE+"#c="+cid+"\n(Needs data to open.)":
     "\nFollow it in WakaBack: "+SITE+"#t="+code+
-    "\nNo data? Copy this whole message into WakaBack > Trips > Open a shared trip.";}
+    "\nNo data? Copy this whole message into WakaBack > Trips > Open a shared trip.");}
 // Share sheet
-const SH={text:"",t:null,live:false,inc:false,rebuild:null};
+const SH={text:"",t:null,live:false,inc:false,rebuild:null,cid:null};
 // "Include my note": off by default, the person sharing decides each time.
 function noteOption(t,label,rebuild){const box=$("sh-noteopt"),cb=$("sh-note");const n=noteOf(t);
   SH.rebuild=n?rebuild:null;box.hidden=!n;if(!n){SH.inc=false;return;}
@@ -903,17 +931,17 @@ function noteOption(t,label,rebuild){const box=$("sh-noteopt"),cb=$("sh-note");c
 function shText(text){SH.text=text;$("sh-msg").textContent=text;$("sh-len").textContent=text.length+" characters, about "+Math.ceil(text.length/153)+" SMS";
   $("sh-sms").href=$("share").classList.contains("sos")||SH.toContacts?smsHref(text):smsLink([],text);$("sh-wa").href="https://wa.me/?text="+encodeURIComponent(text);}
 setTimeout(()=>{$("sh-note").addEventListener("change",e=>{SH.inc=e.target.checked;if(SH.rebuild)shText(SH.rebuild());});},0);
-function openShare(t,live){$("share").classList.remove("sos");$("sh-call").hidden=true;$("sh-to").textContent="";SH.t=t;SH.live=!!live;SH.toContacts=false;
-  noteOption(t,null,()=>shareMessage(t,live,SH.inc));SH.text=shareMessage(t,live,SH.inc);$("sh-title").textContent=live?"Share where I am":"Share this route";
+function openShare(t,live){$("share").classList.remove("sos");$("sh-call").hidden=true;$("sh-to").textContent="";SH.t=t;SH.live=!!live;SH.toContacts=false;SH.cid=null;
+  noteOption(t,null,()=>shareMessage(t,live,SH.inc,SH.cid));SH.text=shareMessage(t,live,SH.inc,SH.cid);$("sh-title").textContent=live?"Share where I am":"Share this route";
   $("sh-sub").textContent=live?"Sends the route you've recorded so far and where you are now.":"Family and friends can see where you went and follow the same path with WakaBack.";
   $("sh-msg").textContent=SH.text;$("sh-len").textContent=SH.text.length+" characters, about "+Math.ceil(SH.text.length/153)+" SMS";
   $("sh-sms").href=smsLink([],SH.text);$("sh-wa").href="https://wa.me/?text="+encodeURIComponent(SH.text);
-  $("sh-copy").textContent="Copy message";$("share").hidden=false;setTimeout(()=>$("sh-sms").focus(),0);}
-function openText(title,sub,text){$("share").classList.remove("sos");$("sh-call").hidden=true;SH.text=text;SH.t=null;noteOption(null);
+  $("sh-copy").textContent="Copy message";$("sh-cancelopt").hidden=true;WBH("shareOpen",{t,live:!!live});$("share").hidden=false;setTimeout(()=>$("sh-sms").focus(),0);}
+function openText(title,sub,text){$("share").classList.remove("sos");$("sh-call").hidden=true;SH.text=text;SH.t=null;SH.cid=null;$("sh-cancelopt").hidden=true;noteOption(null);
   $("sh-title").textContent=title;$("sh-sub").textContent=sub||"";$("sh-msg").textContent=text;$("sh-len").textContent=text.length+" characters, about "+Math.ceil(text.length/153)+" SMS";
   $("sh-sms").href=CONTACTS.length?smsHref(text):smsLink([],text);$("sh-wa").href="https://wa.me/?text="+encodeURIComponent(text);
   $("sh-to").textContent=CONTACTS.length?"To: "+contactNames():"";$("sh-copy").textContent="Copy message";$("share").hidden=false;}
-function closeShare(){$("share").hidden=true;}
+function closeShare(){$("share").hidden=true;$("sh-cancelopt").hidden=true;}
 function copyText(text,el,btn){const done=()=>{btn.textContent="Copied";setTimeout(()=>btn.textContent="Copy code",1600);};
   const sel=()=>{const r=document.createRange();r.selectNodeContents(el);const s=getSelection();s.removeAllRanges();s.addRange(r);btn.textContent="Selected, press copy";};
   try{navigator.clipboard.writeText(text).then(done,sel);}catch(e){sel();}}
@@ -922,14 +950,16 @@ function copyText(text,el,btn){const done=()=>{btn.textContent="Copied";setTimeo
 function renderTrips(){
   const box=$("triplist");const adSlot=$("ad-trips");if(adSlot&&adSlot.parentNode)adSlot.parentNode.removeChild(adSlot);box.innerHTML="";
   S.trips.forEach(t=>{const st=tripStats(t);const c=document.createElement("div");c.className="trip"+(t.id===S.selId?" sel":"");
-    if(S.editId===t.id){const inp=document.createElement("input");inp.id="rename-"+t.id;inp.value=t.name;inp.maxLength=40;inp.setAttribute("aria-label","Trip name");c.appendChild(inp);
-      const ta=document.createElement("textarea");ta.id="note-"+t.id;ta.className="tnote-in";ta.maxLength=NOTE_MAX;ta.value=t.note||"";
+    if(S.editId===t.id){const D=S.editDraft&&S.editDraft.id===t.id?S.editDraft:(S.editDraft={id:t.id,name:t.name,note:t.note||""});
+      const inp=document.createElement("input");inp.id="rename-"+t.id;inp.value=D.name;inp.maxLength=40;inp.oninput=()=>{D.name=inp.value;};inp.setAttribute("aria-label","Trip name");c.appendChild(inp);
+      const ta=document.createElement("textarea");ta.id="note-"+t.id;ta.className="tnote-in";ta.maxLength=NOTE_MAX;ta.value=D.note;
       ta.placeholder=t.private?"Note (optional). Locked with your private password, like this trip.":"Note (optional): who you met, landmarks, the gate colour, a phone number…";ta.setAttribute("aria-label","Trip note");c.appendChild(ta);
-      const cnt=document.createElement("span");cnt.className="note";const upd=()=>{cnt.textContent=ta.value.length+" / "+NOTE_MAX+(t.private?" · 🔒 locked":" · saved on this phone"+(t.cloudAt?" and backed up":""));};upd();ta.oninput=upd;c.appendChild(cnt);
-      const r=document.createElement("div");r.className="row";r.append(mk("Save","btn sm primary",()=>{t.name=inp.value.trim()||t.name;const n=ta.value.trim().slice(0,NOTE_MAX);if(n)t.note=n;else delete t.note;t.cloudDirty=true;S.editId=null;saveTrips();renderAll();}),mk("Cancel","btn sm",()=>{S.editId=null;renderTrips();}));c.appendChild(r);
+      const cnt=document.createElement("span");cnt.className="note";const upd=()=>{D.note=ta.value;cnt.textContent=ta.value.length+" / "+NOTE_MAX+(t.private?" · 🔒 locked":" · saved on this phone"+(t.cloudAt?" and backed up":""));};upd();ta.oninput=upd;c.appendChild(cnt);
+      const r=document.createElement("div");r.className="row";r.append(mk("Save","btn sm primary",()=>{t.name=inp.value.trim()||t.name;const n=ta.value.trim().slice(0,NOTE_MAX);if(n)t.note=n;else delete t.note;t.cloudDirty=true;S.editId=null;S.editDraft=null;S.savedId=t.id;saveTrips();renderAll();WBH("tripEdited",t);setTimeout(()=>{if(S.savedId===t.id){S.savedId=null;renderTrips();}},2500);}),mk("Cancel","btn sm",()=>{S.editId=null;S.editDraft=null;renderTrips();}));c.appendChild(r);
       setTimeout(()=>inp.focus(),0);}
     else{const h=document.createElement("h3");h.textContent=t.name;if(t.sample){const g=document.createElement("span");g.className="tag";g.textContent="Sample";h.appendChild(g);}if(t.shared){const g=document.createElement("span");g.className="tag";g.textContent="Shared";h.appendChild(g);}c.appendChild(h);}
-    const m=document.createElement("div");m.className="meta";m.textContent=(t.cloudAt?"☁️ ":"")+(t.audio?"🎙️ ":"")+fmtDate(t.created)+" · "+fmtDist(st.d)+" · "+fmtDur(st.dur)+" · "+st.stops+(st.stops===1?" stop":" stops");c.appendChild(m);
+    const m=document.createElement("div");m.className="meta";m.textContent=(t.cloudAt&&!t.cloudDirty?"☁️ ":(isPremium()&&!t.sample&&!t.private?"⏳ ":""))+(t.audio?"🎙️ ":"")+fmtDate(t.created)+" · "+fmtDist(st.d)+" · "+fmtDur(st.dur)+" · "+st.stops+(st.stops===1?" stop":" stops");c.appendChild(m);
+    if(S.savedId===t.id){const ok=document.createElement("span");ok.className="note";ok.style.color="var(--accent)";ok.style.fontWeight="700";ok.textContent="✓ Saved";c.appendChild(ok);}
     if(S.editId!==t.id&&noteOf(t)){const nb=document.createElement("p");nb.className="tnote";nb.textContent="📝 "+noteOf(t);c.appendChild(nb);}
     const r=document.createElement("div");r.className="row";
     r.append(mk("Replay","btn sm primary",()=>{pick(t.id);setTab("replay");}),mk("Take me back","btn sm",()=>{pick(t.id);setDir("back");setTab("back");}),mk("Go there again","btn sm",()=>{pick(t.id);setDir("there");setTab("back");}),
@@ -938,7 +968,7 @@ function renderTrips(){
     c.appendChild(r);
     if(S.confirmId===t.id){const q=document.createElement("div");q.className="row";q.style.alignItems="center";const s=document.createElement("span");s.className="note warn";s.textContent=t.audio?"Delete this trip and its voice recording for good?":"Delete this trip for good?";
       q.append(s,mk("Delete","btn sm danger",()=>withPin("Enter your PIN to delete this trip",()=>{if(t.audio){if(VP.tripId===t.id)voiceRelease();vDelete(t.audio.id);}WBH("tripDeleted",t);S.trips=S.trips.filter(x=>x.id!==t.id);if(S.selId===t.id)S.selId=S.trips[0]?S.trips[0].id:null;S.confirmId=null;saveTrips();if(S.back&&S.back.G.id===t.id)backEnd();renderAll();})),mk("Keep","btn sm",()=>{S.confirmId=null;renderTrips();}));c.appendChild(q);}
-    c.addEventListener("click",e=>{if(e.target.closest("button,input,textarea"))return;pick(t.id);});
+    c.addEventListener("click",e=>{if(e.target.closest("button,input,textarea,a")||S.editId===t.id)return;pick(t.id);});
     box.appendChild(c);});
   if(!S.trips.length){const e=document.createElement("p");e.className="empty";e.textContent="No trips yet. Record your first one in Record.";box.appendChild(e);}
   // the advert sits after the first trip, so people reach their own trips first
@@ -1182,6 +1212,11 @@ function renderAll(){renderAds();const t=sel();$("chip").textContent=t?t.name:"N
 const cv=$("map"),ctx=cv.getContext("2d");
 function css(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
 function niceStep(m){const p=Math.pow(10,Math.floor(Math.log10(m)));const r=m/p;return (r<1.5?1:r<3.5?2:r<7.5?5:10)*p;}
+// Direction of travel from the last ~10 m moved (null until you've moved), smoothed a little.
+function moveHeading(pts,cur){if(!pts||!pts.length||!cur)return S.hdLast==null?null:S.hdLast;let prev=null;
+  for(let i=pts.length-1,n=0;i>=0&&n<80;i--,n++){if(dist(pts[i],cur)>=10){prev=pts[i];break;}}
+  if(!prev)return S.hdLast==null?null:S.hdLast;const b=bearing(prev,cur);
+  if(S.hdLast==null)S.hdLast=b;else{const d=((b-S.hdLast+540)%360)-180;S.hdLast=(S.hdLast+d*0.5+360)%360;}return S.hdLast;}
 function draw(){
   const dpr=window.devicePixelRatio||1,w=cv.clientWidth,h=cv.clientHeight;if(!w||!h)return;
   if(cv.width!==Math.round(w*dpr)||cv.height!==Math.round(h*dpr)){cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);}
@@ -1195,16 +1230,40 @@ function draw(){
   if(label==="Going back"&&S.back&&S.back.G.dir==="there")label="Going there again";$("maplabel").textContent=label;
   const all=(main||[]).concat(extra||[]).concat(cur?[cur]:[]);
   if(!all.length){ctx.fillStyle=C.muted;ctx.font="500 14px "+css("--f-body");ctx.textAlign="center";ctx.fillText(S.rec?"Waiting for your first position…":"Your route will appear here",w/2,h/2);return;}
+  // Follow view (recording / guidance): the map turns so the way you're moving points up,
+  // you are an arrow a little below the middle, and the line you've covered trails behind you.
+  const active=(S.tab==="record"&&!!S.rec)||(S.tab==="back"&&!!S.back&&!S.back.arrived);
+  $("zfollow").hidden=!active;$("zfollow").setAttribute("aria-pressed",String(!!S.follow));
+  const hd=active&&cur?moveHeading(S.tab==="record"?S.rec.B.points:S.back.trail,cur):null;
+  const follow=!!(S.follow&&active&&cur);let X,rot=0;
+  if(follow){
+    const P=projector(cur);rot=hd===null?0:hd*Math.PI/180;const co=Math.cos(rot),si=Math.sin(rot);
+    const ox=w/2,oy=h*(S.tab==="back"?0.62:0.4);   // recording: room below for the trail; guiding: room ahead
+    // zoom so the start, the whole trail and (when guiding) the destination stay on screen
+    const pts=(main||[]).concat(extra||[]),mg=30,stepN=Math.max(1,Math.floor(pts.length/1500));let fit=Infinity;
+    for(let i=0;i<pts.length;i+=stepN){const q=P.f(pts[i]),rx=q.x*co-q.y*si,ry=q.x*si+q.y*co;
+      if(rx>1)fit=Math.min(fit,(w-70-ox)/rx);else if(rx<-1)fit=Math.min(fit,(ox-mg)/-rx); // 70: clear of the map buttons
+      if(ry>1)fit=Math.min(fit,(oy-mg)/ry);else if(ry<-1)fit=Math.min(fit,(h-mg-oy)/-ry);}
+    const want=Math.min(Math.min(w,h)/150,fit);      // never closer than ~150 m across
+    if(!S.fsc||want<S.fsc)S.fsc=want;else S.fsc+=(want-S.fsc)*0.3; // zoom out at once, back in gently
+    const sc=S.fsc*S.zoom;
+    const Xq=q=>[ox+(q.x*co-q.y*si)*sc,oy-(q.x*si+q.y*co)*sc];X=p=>Xq(P.f(p));
+    const stepM=niceStep(80/sc),Rm=Math.hypot(w,h)/sc;ctx.strokeStyle=C.grid;ctx.lineWidth=1;ctx.beginPath();
+    for(let g=-Math.ceil(Rm/stepM)*stepM;g<=Rm;g+=stepM){let [ax,ay]=Xq({x:g,y:-Rm}),[bx,by]=Xq({x:g,y:Rm});ctx.moveTo(ax,ay);ctx.lineTo(bx,by);[ax,ay]=Xq({x:-Rm,y:g});[bx,by]=Xq({x:Rm,y:g});ctx.moveTo(ax,ay);ctx.lineTo(bx,by);}ctx.stroke();
+    S._sc=sc;
+  }else{
   let mnLa=Infinity,mxLa=-Infinity,mnLo=Infinity,mxLo=-Infinity;all.forEach(p=>{mnLa=Math.min(mnLa,p.lat);mxLa=Math.max(mxLa,p.lat);mnLo=Math.min(mnLo,p.lon);mxLo=Math.max(mxLo,p.lon);});
   let center={lat:(mnLa+mxLa)/2,lon:(mnLo+mxLo)/2};const P=projector(center);const a=P.f({lat:mnLa,lon:mnLo}),b=P.f({lat:mxLa,lon:mxLo});
   const span=Math.max(b.x-a.x,b.y-a.y,120);let sc=Math.min(w/Math.max(b.x-a.x,120),h/Math.max(b.y-a.y,120))*0.8*S.zoom;
   let cx=0,cy=0;if(S.zoom>1&&cur){const c=P.f(cur);cx=c.x;cy=c.y;}
-  const X=p=>{const q=P.f(p);return [w/2+(q.x-cx)*sc,h/2-(q.y-cy)*sc];};
+  X=p=>{const q=P.f(p);return [w/2+(q.x-cx)*sc,h/2-(q.y-cy)*sc];};
   // grid
   const stepM=niceStep(80/sc);ctx.strokeStyle=C.grid;ctx.lineWidth=1;ctx.beginPath();
   const x0=cx-w/2/sc,x1=cx+w/2/sc,y0=cy-h/2/sc,y1=cy+h/2/sc;
   for(let gx=Math.ceil(x0/stepM)*stepM;gx<=x1;gx+=stepM){const sx=w/2+(gx-cx)*sc;ctx.moveTo(sx,0);ctx.lineTo(sx,h);}
   for(let gy=Math.ceil(y0/stepM)*stepM;gy<=y1;gy+=stepM){const sy=h/2-(gy-cy)*sc;ctx.moveTo(0,sy);ctx.lineTo(w,sy);}ctx.stroke();
+  S._sc=sc;}
+  const sc=S._sc;
   const line=(pts,col,wd,dash)=>{if(!pts||pts.length<2)return;ctx.strokeStyle=col;ctx.lineWidth=wd;ctx.lineJoin=ctx.lineCap="round";ctx.setLineDash(dash||[]);ctx.beginPath();pts.forEach((p,i)=>{const [x,y]=X(p);i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.stroke();ctx.setLineDash([]);};
   if(played){line(main,C.dim,6);const sub=main.slice(0,played.i+1).concat([played]);line(sub,C.path,6);}
   else line(main,S.tab==="back"&&S.back?C.path:C.path,6);
@@ -1217,11 +1276,14 @@ function draw(){
     if(isBack){pin(last,"A",C.path);pin(first,"B",C.fg);}else{pin(first,"A",C.path);if(main.length>1&&!S.rec)pin(last,"B",C.fg);}}
   // off-route connector
   if(S.tab==="back"&&S.back&&S.back.g&&S.back.g.off>25&&cur){const [x1_,y1_]=X(cur),[x2,y2]=X(S.back.g.near);ctx.strokeStyle=C.warn;ctx.lineWidth=2;ctx.setLineDash([5,5]);ctx.beginPath();ctx.moveTo(x1_,y1_);ctx.lineTo(x2,y2);ctx.stroke();ctx.setLineDash([]);}
-  if(cur){const [x,y]=X(cur);ctx.beginPath();ctx.arc(x,y,16,0,7);ctx.fillStyle=C.me+"33";ctx.fill();ctx.beginPath();ctx.arc(x,y,7.5,0,7);ctx.fillStyle=C.me;ctx.fill();ctx.lineWidth=3;ctx.strokeStyle=C.surface;ctx.stroke();}
+  if(cur){const [x,y]=X(cur);ctx.beginPath();ctx.arc(x,y,16,0,7);ctx.fillStyle=C.me+"33";ctx.fill();
+    const ang=hd===null?null:(follow?0:hd*Math.PI/180);
+    if(ang!==null){ctx.save();ctx.translate(x,y);ctx.rotate(ang);ctx.beginPath();ctx.moveTo(0,-13);ctx.lineTo(9,9);ctx.lineTo(0,4);ctx.lineTo(-9,9);ctx.closePath();ctx.fillStyle=C.me;ctx.fill();ctx.lineWidth=2.5;ctx.strokeStyle=C.surface;ctx.lineJoin="round";ctx.stroke();ctx.restore();}
+    else{ctx.beginPath();ctx.arc(x,y,7.5,0,7);ctx.fillStyle=C.me;ctx.fill();ctx.lineWidth=3;ctx.strokeStyle=C.surface;ctx.stroke();}}
   // scale bar + north
   const barM=niceStep(90/sc),barPx=barM*sc;ctx.fillStyle=C.fg;ctx.fillRect(14,h-20,barPx,3);ctx.fillRect(14,h-26,2,9);ctx.fillRect(14+barPx-2,h-26,2,9);
   ctx.font="500 11px "+css("--f-mono");ctx.textAlign="left";ctx.textBaseline="bottom";ctx.fillText(fmtDist(barM),14,h-28);
-  ctx.textAlign="center";ctx.textBaseline="middle";ctx.font="700 12px "+css("--f-body");ctx.fillStyle=C.muted;ctx.fillText("N",w-62,22);ctx.beginPath();ctx.moveTo(w-62,30);ctx.lineTo(w-67,42);ctx.lineTo(w-57,42);ctx.closePath();ctx.fill();
+  ctx.textAlign="center";ctx.textBaseline="middle";ctx.font="700 12px "+css("--f-body");ctx.fillStyle=C.muted;{const nx=w-62,ny=34;ctx.fillText("N",nx+Math.sin(-rot)*16,ny-Math.cos(-rot)*16);ctx.save();ctx.translate(nx,ny);ctx.rotate(-rot);ctx.beginPath();ctx.moveTo(0,-8);ctx.lineTo(-5,5);ctx.lineTo(5,5);ctx.closePath();ctx.fill();ctx.restore();}
 }
 
 // ---------- events ----------
@@ -1278,18 +1340,32 @@ $("sh-copy").onclick=()=>{const b=$("sh-copy");try{navigator.clipboard.writeText
 function selectEl(el){const r=document.createRange();r.selectNodeContents(el);const s=getSelection();s.removeAllRanges();s.addRange(r);}
 // Opened from a shared link (…/wayback/#t=WB2…): add the route automatically,
 // also when WakaBack is already open and only the link part changes.
+// Premium cancellable share (…/wayback/#c=ID): the route is fetched online, so it stops opening once cancelled.
+function openCancellable(id){const n=$("importnote");setTab("trips");n.className="note";n.textContent="Opening the shared route…";
+  try{history.replaceState(null,"",location.pathname+location.search);}catch(e){}
+  const fail=m=>{n.className="note warn";n.textContent=m;};
+  const go=k=>{const P=window.WBPremium;if(!P||!P.shareGet){if(k<50)return setTimeout(()=>go(k+1),200);return fail("Couldn't open this link. Update WakaBack and try again.");}
+    P.shareGet(id).then(r=>{if(!r)return fail("This shared link was cancelled by the person who sent it.");
+      try{const t=decodeTrip(r.code);const ex=S.trips.find(x=>x.name===t.name&&x.created===t.created);if(ex){S.selId=ex.id;renderAll();}else addShared(t,n);
+        n.className="note";n.textContent="Shared route added. Tap Replay to see it, or Go there again to follow it.";}catch(e){fail(e.message);}})
+    .catch(e=>fail(/offline|network|fetch|unavailable|timeout/i.test(String(e&&(e.code||e.message)))?"Connect to the internet to open this shared route.":"Couldn't open this link right now. Try again later."));};
+  go(0);}
+window.addEventListener("hashchange",()=>{const hc=decodeURIComponent(location.hash||"");if(/^#c=/.test(hc)){openCancellable(hc.slice(3));return;}});
 window.addEventListener("hashchange",()=>{const h=decodeURIComponent(location.hash||"");if(!/^#t=/.test(h))return;const n=$("importnote");
   try{const t=decodeTrip(h.slice(3));const ex=S.trips.find(x=>x.name===t.name&&x.created===t.created);if(ex){S.selId=ex.id;renderAll();}else addShared(t,n);
     n.className="note";n.textContent="Shared route added. Tap Replay to see it, or Go there again to follow it.";setTab("trips");}
   catch(e){n.className="note warn";n.textContent=e.message;setTab("trips");}
   try{history.replaceState(null,"",location.pathname+location.search);}catch(e){}});
+(function(){const hc=decodeURIComponent(location.hash||"");if(/^#c=/.test(hc))setTimeout(()=>openCancellable(hc.slice(3)),0);})();
 (function(){const h=decodeURIComponent(location.hash||"");if(!/^#t=/.test(h))return;
   try{const t=decodeTrip(h.slice(3));if(!S.trips.some(x=>x.name===t.name&&x.created===t.created)){S.trips.unshift(t);saveTrips();}S.selId=(S.trips.find(x=>x.name===t.name&&x.created===t.created)||t).id;S.openShared=true;}catch(e){S.sharedErr=e.message;}
   try{history.replaceState(null,"",location.pathname+location.search);}catch(e){}})();
 $("zin").onclick=()=>{S.zoom=Math.min(8,S.zoom*1.6);draw();};
 $("zout").onclick=()=>{S.zoom=Math.max(0.4,S.zoom/1.6);draw();};
-$("zfit").onclick=()=>{S.zoom=1;draw();};
-new ResizeObserver(()=>draw()).observe(cv);
+$("zfit").onclick=()=>{S.zoom=1;S.follow=false;try{localStorage.setItem("wayback.follow","off");}catch(e){}draw();};
+$("zfollow").onclick=()=>{S.follow=!S.follow;S.zoom=1;try{localStorage.setItem("wayback.follow",S.follow?"on":"off");}catch(e){}draw();};
+try{S.follow=localStorage.getItem("wayback.follow")!=="off";}catch(e){S.follow=true;}
+if(window.ResizeObserver)new ResizeObserver(()=>draw()).observe(cv);else window.addEventListener("resize",()=>draw());
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change",draw);
 new MutationObserver(draw).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&(S.rec||S.back))wake(true);});
@@ -1411,7 +1487,8 @@ document.addEventListener("visibilitychange",()=>{if(document.visibilityState===
   else if(AL.awayAt&&Date.now()-AL.awayAt>60000)lockNow();});
 renderAppLock();if(alOn())lockNow();else document.documentElement.classList.remove("al-locked");
 
-window.WBApp={S,saveTrips,mk,pick,vDelete,voiceRelease,saveTripsRaw:list=>persistTrips(list),tripsReady,withPin,lockNow,kvGet,kvSet,storageWarn,renderAll,renderRec,renderAds,setTab,encodeTrip,decodeTrip,vGetAll,vPut,startGPS,recStart,recStop,openText,refreshSOS,
+window.WBApp={S,saveTrips,mk,pick,vDelete,voiceRelease,saveTripsRaw:list=>persistTrips(list),tripsReady,
+  setShareCid:id=>{SH.cid=id||null;if(SH.t)shText(shareMessage(SH.t,SH.live,SH.inc,SH.cid));},shareState:()=>({inc:SH.inc,cid:SH.cid,t:SH.t}),withPin,lockNow,kvGet,kvSet,storageWarn,renderAll,renderRec,renderAds,setTab,encodeTrip,decodeTrip,vGetAll,vPut,startGPS,recStart,recStop,openText,refreshSOS,
   fmtDist,fmtDur,fmtClock,fmtDate,pathLen,SITE,lastKnown,say,NATIVE,IS_ANDROID,$,get contacts(){return CONTACTS;},voiceConsentGiven:()=>{try{return localStorage.getItem("wayback.voiceconsent.v1")==="yes";}catch(e){return false;}}};
 WBH("ready",{});
 })();
