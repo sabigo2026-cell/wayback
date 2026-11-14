@@ -1,7 +1,7 @@
 {
-  "name": "WakaBack",
-  "short_name": "WakaBack",
-  "description": "Record a route, replay it, and get guided back the same way.",
+  "name": "WayBack",
+  "short_name": "WayBack",
+  "description": "Go anywhere. Come back safe. Record your trip, get guided back, share it live and send SOS, even without data.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

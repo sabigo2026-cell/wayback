@@ -258,7 +258,7 @@
       <label class="opt"><input type="radio" name="pv-mode" value="only"><div><b>Only me</b><span>Strongest privacy. If you forget the password and lose your recovery code, hidden trips are lost forever.</span></div></label>
       ${msg}<div class="row"><button class="btn primary" id="pv-go" type="button">Continue</button><button class="btn" id="pv-x" type="button">Cancel</button></div>`;
     else if (V.view === "code") c.innerHTML = `<h2>Your recovery code</h2>
-      <p class="note">Write this down and keep it somewhere safe (not only on this phone). It opens your Hidden trips if you forget the password.</p>
+      <p class="note">Write this down and keep it somewhere safe (not only on this phone). It opens your Hidden trips if you forget the password. <b>Never give it to anyone</b>, even someone saying they're from WakaBack.</p>
       <div class="code" id="pv-code">${esc(V.code)}</div>
       <div class="row"><button class="btn sm" id="pv-copy" type="button">Copy code</button></div>
       <label class="sw" style="display:flex;gap:8px;align-items:center;font-weight:600"><input type="checkbox" id="pv-saved" style="width:20px;height:20px"> I've written it down</label>

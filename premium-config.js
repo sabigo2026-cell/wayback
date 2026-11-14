@@ -12,6 +12,7 @@ window.WAKA_CONFIG = {
   //   appId: "…"
   // },
   revenuecat: { android: "", ios: "" },   // RevenueCat public SDK keys (goog_… and appl_…)
+  appCheck: { recaptchaSiteKey: "" },     // App Check (PREMIUM-SETUP.md, Part 6): the reCAPTCHA v3 *site* key
   entitlement: "premium",                  // RevenueCat entitlement name
   liveUrl: "https://sabigo2026-cell.github.io/wayback/live.html"
 };

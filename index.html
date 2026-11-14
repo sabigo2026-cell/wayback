@@ -8,7 +8,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<title>WakaBack</title>
+<title>WakaBack · Go anywhere. Come back safe.</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
 <style>
@@ -110,6 +110,7 @@ a.adlink{display:block;text-decoration:none;color:inherit;border-radius:12px}
 a.adlink:active .ad{transform:scale(.99)}
 .ad .adgo{color:var(--accent);font-weight:600;font-size:.9rem}
 .ad.adbanner{flex-direction:column;gap:0;padding:0;overflow:hidden;border-style:solid}
+.adreport{display:block;text-align:right;font-size:.74rem;color:var(--muted);text-decoration:underline;margin:3px 2px 0;padding:4px 0}
 .ad.adbanner img{width:100%;height:auto;max-height:260px;object-fit:cover;border-radius:0;display:block}
 .ad.adbanner .adtxt{padding:8px 12px 10px;flex-direction:row;flex-wrap:wrap;align-items:baseline;gap:4px 10px}
 .ad.adbanner .adtxt b{font-size:.9rem}
@@ -169,7 +170,7 @@ a.adlink:active .ad{transform:scale(.99)}
 .vbanner .rec{display:inline-flex;align-items:center;gap:8px}
 .vbanner .rec::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--warn);animation:pulse 1.2s infinite}
 .banner{border-radius:10px;padding:10px 12px;background:var(--warn-bg);color:var(--warn);font-weight:600;display:flex;flex-direction:column;gap:8px}
-@media (max-width:420px){.stats{grid-template-columns:repeat(2,1fr)}.brand p{display:none}}
+@media (max-width:420px){.stats{grid-template-columns:repeat(2,1fr)}.brand{flex-direction:column;align-items:flex-start;gap:0}.brand p{font-size:.72rem;white-space:normal;line-height:1.2}}
 @media (prefers-reduced-motion:reduce){.dot.live,.vbanner .rec::before{animation:none}}
 </style>
 <style>html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}img{max-width:100%}body{margin:0;-webkit-tap-highlight-color:transparent;user-select:none}textarea,input,.code{user-select:text}</style>
@@ -185,7 +186,7 @@ window.WB_ERRORS=[];window.onerror=function(msg,src,line,col){try{if(/ResizeObse
 <body>
 <div class="app">
   <header>
-    <div class="brand"><h1>Waka<span>Back</span></h1><p>Record once. Replay it. Find your way back.</p></div>
+    <div class="brand"><h1>Waka<span>Back</span></h1><p>Go anywhere. Come back safe.</p></div>
     <div class="hdr-right"><div class="chip" id="chip">No trip selected</div><button class="helpbtn" id="helpbtn" aria-pressed="false">Help</button><button class="sosbtn" id="sosbtn" type="button" aria-label="SOS. Opens a help message with your location"><i></i><span>SOS</span></button></div>
   </header>
 
@@ -307,6 +308,11 @@ window.WB_ERRORS=[];window.onerror=function(msg,src,line,col){try{if(/ResizeObse
         <p class="note">The people WakaBack texts when you tap SOS or tell family you've arrived. SMS works without data.</p>
         <div class="contacts" id="contacts"></div>
         <div class="row"><button class="btn sm primary" id="savecontacts" type="button">Save contacts</button><span class="note" id="contactsnote"></span></div>
+      </section>
+      <section>
+        <h2>Stay safe from scammers</h2>
+        <p class="note" style="color:var(--fg)"><b>WakaBack will never call, text, WhatsApp or email you asking for your password, PIN, OTP, recovery code or a bank transfer.</b></p>
+        <p class="note">Premium is paid only inside the app, through Google Play or the App Store. We never take bank transfers or payments through agents. Our only official email is <a href="mailto:wakabackapp@gmail.com">wakabackapp@gmail.com</a>. If anyone claiming to be WakaBack asks you for money or codes, it's a scam: please tell us.</p>
       </section>
       <section>
         <h2>App lock</h2>
@@ -920,7 +926,8 @@ function shareMessage(t,live,inc,cid){
     "\nRoute: "+fmtDist(st.d)+", "+fmtDur(st.dur)+", "+fmtClock(end.t)+(inc?noteLine(t):"")+
     (cid?"\nFollow it in WakaBack: "+SITE+"#c="+cid+"\n(Needs data to open.)":
     "\nFollow it in WakaBack: "+SITE+"#t="+code+
-    "\nNo data? Copy this whole message into WakaBack > Trips > Open a shared trip.");}
+    "\nNo data? Copy this whole message into WakaBack > Trips > Open a shared trip.")+
+    "\nWakaBack · Go anywhere. Come back safe.";}
 // Share sheet
 const SH={text:"",t:null,live:false,inc:false,rebuild:null,cid:null};
 // "Include my note": off by default, the person sharing decides each time.
@@ -1024,7 +1031,11 @@ function renderAd(slotId){
   card.appendChild(tx);
   const x=document.createElement("button");x.type="button";x.className="adclose";x.textContent="✕";x.setAttribute("aria-label","Hide adverts");x.title="Hide adverts";x.onclick=hideAds;slot.appendChild(x);
   if(link){const w=document.createElement("a");w.className="adlink";w.href=link;w.target="_blank";w.rel="noopener sponsored";w.setAttribute("aria-label","Sponsored: "+a.title+". "+(a.button||"Learn more"));w.appendChild(card);slot.appendChild(w);}
-  else slot.appendChild(card);}
+  else slot.appendChild(card);
+  // let people report a scam or misleading advert straight to us
+  const rp=document.createElement("a");rp.className="adreport";rp.textContent="Report this ad";
+  rp.href="mailto:wakabackapp@gmail.com?subject="+encodeURIComponent("Report advert: "+a.title)+"&body="+encodeURIComponent("I want to report this WakaBack advert:\n\nTitle: "+a.title+"\nLink: "+(a.link||"-")+"\nPhone: "+(a.phone||"-")+"\nCountry: "+userCountry()+"\nDate: "+new Date().toString()+"\n\nWhat's wrong with it (scam, misleading, offensive…):\n");
+  slot.appendChild(rp);}
 function renderAds(){renderAd("ad-trips");renderAd("ad-replay");}
 
 // ---------- emergency contacts ----------
@@ -1391,7 +1402,7 @@ async function alNewCode(then){const code=alMakeCode();const st=alStored();if(!s
   st.rs=Math.random().toString(36).slice(2);st.rh=await alHash(alNorm(code),st.rs);try{localStorage.setItem(ALKEY,JSON.stringify(st));}catch(e){}
   AL.mode="code";AL.then=then||null;$("applock").hidden=false;document.documentElement.classList.remove("al-locked");
   $("al-title").textContent="Write down your recovery code";const sub=$("al-sub");sub.hidden=false;
-  sub.innerHTML="If you ever forget your PIN, this code removes it, <b>even without data</b>. Write it on paper and keep it somewhere safe, not only on this phone. It's shown only now.";
+  sub.innerHTML="If you ever forget your PIN, this code removes it, <b>even without data</b>. Write it on paper and keep it somewhere safe, not only on this phone. It's shown only now. <b>Never give it to anyone</b>, even someone saying they're from WakaBack.";
   $("al-pinbox").hidden=true;$("al-pwbox").hidden=true;$("al-rcbox").hidden=true;$("al-codebox").hidden=false;$("al-forgot").hidden=true;$("al-cancel").hidden=true;$("al-sos").hidden=true;
   $("al-code").textContent=code;$("al-saved").checked=false;$("al-codedone").disabled=true;}
 $("al-saved").onchange=e=>{$("al-codedone").disabled=!e.target.checked;};

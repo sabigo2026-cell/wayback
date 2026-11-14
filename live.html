@@ -170,10 +170,20 @@ $("r-play").onclick=async()=>{if(playing){stopReplay();return;}await loadParts()
 $("r-scrub").oninput=e=>{pt=t0()+(t1()-t0())*(+e.target.value/1000);$("r-clock").textContent=fmtClock(pt);if(playing)playAt(pt);draw();};
 
 // ---- notify me ----
-const NK="wakaback.notify."+id;try{if(localStorage.getItem(NK))$("nf-msg").textContent="You'll get emails about this trip at "+localStorage.getItem(NK)+".";}catch(e){}
+// The email gets a confirmation link first (so nobody can sign strangers up). Alerts start once it's confirmed.
+const NK="wakaback.notify."+id;try{if(localStorage.getItem(NK))$("nf-msg").textContent="You asked for emails about this trip at "+localStorage.getItem(NK)+". If you haven't yet, tap the link in the confirmation email.";}catch(e){}
+async function emailId(em){const t=em.trim().toLowerCase();try{const h=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(t));return Array.from(new Uint8Array(h)).map(x=>x.toString(16).padStart(2,"0")).join("").slice(0,40);}
+  catch(e){let h=2166136261;for(const c of t){h^=c.charCodeAt(0);h=Math.imul(h,16777619)>>>0;}return "f"+h.toString(16)+t.length;}}
+function randToken(){const a=new Uint8Array(18);try{crypto.getRandomValues(a);}catch(e){for(let i=0;i<a.length;i++)a[i]=Math.random()*256;}return Array.from(a).map(x=>x.toString(16).padStart(2,"0")).join("");}
 $("nf").onsubmit=async e=>{e.preventDefault();const em=$("nf-email").value.trim();if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){$("nf-msg").textContent="Enter a valid email address.";return;}
-  try{await cloud.liveAddWatcher(id,em);try{localStorage.setItem(NK,em);}catch(x){}$("nf-msg").textContent="Done. We'll email "+em+" if they're late, stop sending, press SOS, or when they arrive.";$("nf-email").value="";}
-  catch(x){$("nf-msg").textContent="Couldn't save that. Check your internet and try again.";}};
+  try{await cloud.liveAddWatcher(id,await emailId(em),em,randToken());try{localStorage.setItem(NK,em);}catch(x){}
+    $("nf-msg").textContent="Almost done: we've sent a confirmation email to "+em+". Tap the link in it (check spam too) and we'll email you if they're late, stop sending, press SOS, or when they arrive.";$("nf-email").value="";}
+  catch(x){$("nf-msg").textContent=/permission|denied|exists/i.test(String(x&&(x.code||x.message)))?"That email is already signed up for this trip, or the list is full. Check your inbox for the confirmation email.":"Couldn't save that. Check your internet and try again.";}};
+// opened from the confirmation email: …live.html#s=ID&w=WATCHER&k=TOKEN
+(function(){const h=decodeURIComponent(location.hash||"");const w=(h.match(/[#&]w=([A-Za-z0-9]+)/)||[])[1],k=(h.match(/[#&]k=([A-Za-z0-9]+)/)||[])[1];if(!w||!k||!id)return;
+  const go=async n=>{if(!cloud){if(n<40)return setTimeout(()=>go(n+1),250);return;}
+    try{await cloud.liveConfirmWatcher(id,w,k);$("nf-msg").textContent="✓ Confirmed. We'll email you about this trip.";try{history.replaceState(null,"",location.pathname+"#s="+id);}catch(e){}}
+    catch(e){$("nf-msg").textContent="This confirmation link has expired or was already used.";}};go(0);})();
 
 // ---- live updates ----
 async function onDoc(d){

@@ -126,7 +126,8 @@
         h += perksHTML();
         if (A().NATIVE && P.offerings && P.offerings.length) {
           h += `<div class="plans">${P.offerings.map((o, i) => `<button class="plan" data-pkg="${i}" type="button"><b>${esc(o.price)}</b><span>${esc(o.label)}</span></button>`).join("")}</div>
-            <div class="row"><button class="linkbtn" id="pm-restore">Restore purchases</button></div>`;
+            <div class="row"><button class="linkbtn" id="pm-restore">Restore purchases</button></div>
+            <p class="note">🔒 Pay only here, through ${A().IS_ANDROID ? "Google Play" : "the App Store"}. WakaBack never takes bank transfers, and never asks for your password or OTP.</p>`;
         } else if (A().NATIVE) {
           h += `<p class="note">Loading Premium plans…</p>`;
         } else {
@@ -343,7 +344,7 @@
     if (!P.live) return; const app = A();
     const eta = P.live.eta ? "\nI expect to arrive around " + app.fmtClock(P.live.eta) + "." : "";
     const text = (P.live.status === "sos" ? "SOS: I need help. Follow me live on WakaBack: " : "Follow my trip live on WakaBack: ") + liveLink(P.live.id) + eta +
-      (P.live.voice ? "\nYou can also hear our conversation (about 1 minute behind)." : "") + ((P.settings.emails || []).length ? "" : "\nOpen the link and tap “Notify me” to get an email if I'm late.");
+      (P.live.voice ? "\nYou can also hear our conversation (about 1 minute behind)." : "") + ((P.settings.emails || []).length ? "" : "\nOpen the link and tap “Notify me” to get an email if I'm late.") + (P.live.status === "sos" ? "" : "\nWakaBack · Go anywhere. Come back safe.");
     app.openText("Send your live link", "Family can open it on any phone, with no app needed. SMS works without data.", text);
   }
   let flushing = false;
@@ -353,7 +354,8 @@
     flushing = true; L.flushAt = Date.now();
     try {
       if (!L.created) { await P.cloud.liveCreate(L.id, L.createData); L.created = true; delete L.createData; }
-      if (L.pending.length) { const batch = L.pending.slice(0, 500); await P.cloud.liveAddPoints(L.id, L.n, batch); L.n++; L.pending.splice(0, batch.length); }
+      // send everything that built up while there was no network (500 points per piece)
+      for (let k = 0; L.pending.length && k < 40; k++) { const batch = L.pending.slice(0, 500); await P.cloud.liveAddPoints(L.id, L.n, batch); L.n++; L.pending.splice(0, batch.length); persistLive(); }
       const now = Date.now();
       await P.cloud.liveUpdate(L.id, { lastAt: now, last: L.last, silentAlerted: false, expireAt: now + 30 * DAY, status: L.status, voice: L.voice });
       L.lastSent = now; persistLive();
