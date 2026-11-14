@@ -272,10 +272,11 @@ window.WB_ERRORS=[];window.onerror=function(msg,src,line,col){try{if(/ResizeObse
         <div class="seg" id="bk-dir" role="group" aria-label="Direction"><button data-d="back" aria-pressed="true">Take me back</button><button data-d="there" aria-pressed="false">Go there again</button></div>
         <div class="guide" id="bk-guide"><p class="big" id="bk-instr">Ready when you are</p><span class="note" id="bk-sub">WakaBack will lead you along the path you took, in reverse.</span></div>
         <div class="bar"><i id="bk-bar"></i></div>
+        <p class="note" id="bk-eta" style="margin:0;font-weight:600;color:var(--fg)"></p>
         <div class="stats">
           <div class="stat"><b id="bk-left">—</b><small id="bk-leftlbl">To the start</small></div>
           <div class="stat"><b id="bk-off">—</b><small>From path</small></div>
-          <div class="stat"><b id="bk-time">0:00:00</b><small>Walking</small></div>
+          <div class="stat"><b id="bk-time">0:00:00</b><small>Time</small></div>
           <div class="stat"><b id="bk-src">—</b><small>Position</small></div>
         </div>
         <div class="row">
@@ -561,6 +562,13 @@ S.trips=loadTrips()||[sampleTrip()];
 if(!S.trips.length)S.trips=[sampleTrip()];
 S.selId=S.trips[0].id;TDB.startIds=new Set(S.trips.map(t=>t.id));
 const sel=()=>S.trips.find(t=>t.id===S.selId)||null;
+// Travel-time estimates for a distance (typical town speeds, including stops and traffic).
+const SPEED={walk:1.35,okada:6.1,car:7.5}; // m/s ≈ 5, 22 and 27 km/h
+function fmtMins(sec){const m=Math.max(1,Math.round(sec/60));if(m<60)return m+" min";const h=Math.floor(m/60),r=m%60;return h+" h"+(r?" "+r+" min":"");}
+function travelTimes(d){return {walk:fmtMins(d/SPEED.walk),okada:fmtMins(d/SPEED.okada),car:fmtMins(d/SPEED.car)};}
+// How a trip was recorded, from its average speed: on foot or in a vehicle (okada, keke, car or bus).
+function tripMode(t){const st=tripStats(t);if(st.d<50||st.dur<30000)return null;const v=st.d/(st.dur/1000);return v<2.4?"walk":"vehicle";}
+function timesLine(t){const st=tripStats(t);if(st.d<50)return "";const x=travelTimes(st.d);return "🚶 "+x.walk+" · 🛵 "+x.okada+" · 🚗 "+x.car;}
 function tripStats(t){const d=pathLen(t.points);const dur=t.points.length?t.points[t.points.length-1].t-t.points[0].t:0;return {d,dur,stops:t.stops.length};}
 
 // ---------- wake lock ----------
@@ -817,6 +825,12 @@ function backStart(demo){
   else S.back.src=startGPS(onFix,msg=>{if(!S.back)return;$("bk-note").textContent=msg;$("bk-note").className="note warn";if(/blocked|can't read/i.test(msg)&&!S.back.trail.length)backEnd();},"back");
   S.hdLast=null;S.fsc=0;wake(true);S.zoom=1;setTab("back");renderBack();}
 function backEnd(){if(S.back&&S.back.src)S.back.src.stop();voicePause();S.back=null;wake(false);renderBack();draw();}
+// Arrival estimate while guiding: your own recent speed (last ~5 minutes), never slower than walking pace.
+function etaFor(b){if(!b||!b.g||b.arrived)return null;const tr=b.trail;if(!tr||tr.length<2)return null;const last=tr[tr.length-1];let first=tr[0];
+  for(let i=tr.length-1;i>=0;i--){if(last.t-tr[i].t>300000)break;first=tr[i];}
+  const dt=(last.t-first.t)/1000;let v=dt>=20?pathLen(tr.slice(tr.indexOf(first)))/dt:0;
+  const floor=b.vehicle?2.5:1.0;if(dt<20)v=b.vehicle?SPEED.okada:SPEED.walk;v=Math.max(v,floor);
+  return (b.g.remain+(b.g.offRaw||b.g.off||0)*0.5)/v;}
 function renderBack(){
   const t=sel();$("bk-empty").hidden=!!t;$("bk-body").hidden=!t;if(!t)return;
   {const tv=$("bk-tripvoice");tv.hidden=!(t.audio&&S.dir==="there"&&pathLen(t.points)>=5);tv.textContent=S.tripVoice?"🎙️ Trip recording: On":"🎙️ Trip recording: Off";tv.setAttribute("aria-pressed",String(!!S.tripVoice));}const there=S.dir==="there";showNote("bk-tnote",t);$("bk-name").textContent=(there?"Again to the end of: ":"Back along: ")+t.name;
@@ -825,10 +839,14 @@ function renderBack(){
   $("bk-start").hidden=active;$("bk-demo").hidden=active;$("bk-end").hidden=!b;$("bk-end").textContent=b&&b.arrived?"Done":"End guidance";
   const guideEl=$("bk-guide");guideEl.classList.remove("off");
   if(!b){$("bk-instr").textContent="Ready when you are";$("bk-sub").textContent=there?"Start where this trip started. WakaBack leads you along the same path to where it ended.":"Start where this trip ended. WakaBack leads you along the same path, in reverse.";
-    $("bk-bar").style.width="0";["bk-left","bk-off","bk-src"].forEach(i=>$(i).textContent="—");$("bk-time").textContent="0:00:00";return;}
+    $("bk-bar").style.width="0";["bk-left","bk-off","bk-src"].forEach(i=>$(i).textContent="—");$("bk-time").textContent="0:00:00";
+    {const tl=timesLine(t);$("bk-eta").textContent=tl?"About: "+tl:"";}return;}
   $("bk-src").textContent=b.demo?"Demo":"GPS";
   if(!b.g){$("bk-instr").textContent="Finding you…";$("bk-sub").textContent="Waiting for your first position.";return;}
-  const g=b.g;$("bk-left").textContent=fmtDist(g.remain);$("bk-off").textContent=g.lane?"Other lane":fmtDist(g.off);$("bk-time").textContent=fmtDur(b.lastT-b.startT);
+  const g=b.g;{const e=etaFor(b);$("bk-eta").textContent=b.arrived?"":e?"Arriving in about "+fmtMins(e)+" · around "+fmtClock(Date.now()+e*1000):"";
+    if(e&&!b.etaSaid&&!b.demo&&b.lastT-b.startT>45000&&g.remain>200){b.etaSaid=1;const m=Math.max(1,Math.round(e/60)),h=Math.floor(m/60),r=m%60;
+      say("You'll arrive in about "+(h?h+(h===1?" hour":" hours")+(r?" and "+r+" minutes":""):m+(m===1?" minute":" minutes"))+".");}}
+  $("bk-left").textContent=fmtDist(g.remain);$("bk-off").textContent=g.lane?"Other lane":fmtDist(g.off);$("bk-time").textContent=fmtDur(b.lastT-b.startT);
   $("bk-bar").style.width=Math.min(100,g.along/(b.G.total||1)*100)+"%";
   $("bk-arrived").hidden=!b.arrived;if(b.arrived){$("bk-instr").textContent=there?"You've arrived":"You're back at the start";$("bk-sub").textContent=(b.vehicle?"Travelled ":"Walked ")+fmtDist(pathLen(b.trail))+" in "+fmtDur(b.lastT-b.startT)+".";return;}
   if(b.G.total<5){$("bk-instr").textContent=fmtDist(g.off)+" to go";$("bk-sub").textContent="Head "+compass(bearing(b.cur,g.near))+" to reach the shared location.";$("bk-left").textContent=fmtDist(g.off);$("bk-off").textContent="—";$("bk-bar").style.width="0";return;}
@@ -923,7 +941,8 @@ function shareMessage(t,live,inc,cid){
   const at=end.lat.toFixed(5)+","+end.lon.toFixed(5);
   return (live?"I'm sharing my route so far with WakaBack.":"My route with WakaBack: "+t.name+".")+
     "\n"+(live?"I'm here now":"It ends here")+": https://maps.google.com/?q="+at+" ("+at+")"+
-    "\nRoute: "+fmtDist(st.d)+", "+fmtDur(st.dur)+", "+fmtClock(end.t)+(inc?noteLine(t):"")+
+    "\nRoute: "+fmtDist(st.d)+", "+fmtDur(st.dur)+(tripMode(t)?(tripMode(t)==="walk"?" on foot":" by vehicle"):"")+", "+fmtClock(end.t)+
+    (st.d>=50?"\nAbout: walk "+travelTimes(st.d).walk+" · okada/keke "+travelTimes(st.d).okada+" · car "+travelTimes(st.d).car:"")+(inc?noteLine(t):"")+
     (cid?"\nFollow it in WakaBack: "+SITE+"#c="+cid+"\n(Needs data to open.)":
     "\nFollow it in WakaBack: "+SITE+"#t="+code+
     "\nNo data? Copy this whole message into WakaBack > Trips > Open a shared trip.")+
@@ -965,7 +984,8 @@ function renderTrips(){
       const r=document.createElement("div");r.className="row";r.append(mk("Save","btn sm primary",()=>{t.name=inp.value.trim()||t.name;const n=ta.value.trim().slice(0,NOTE_MAX);if(n)t.note=n;else delete t.note;t.cloudDirty=true;S.editId=null;S.editDraft=null;S.savedId=t.id;saveTrips();renderAll();WBH("tripEdited",t);setTimeout(()=>{if(S.savedId===t.id){S.savedId=null;renderTrips();}},2500);}),mk("Cancel","btn sm",()=>{S.editId=null;S.editDraft=null;renderTrips();}));c.appendChild(r);
       setTimeout(()=>inp.focus(),0);}
     else{const h=document.createElement("h3");h.textContent=t.name;if(t.sample){const g=document.createElement("span");g.className="tag";g.textContent="Sample";h.appendChild(g);}if(t.shared){const g=document.createElement("span");g.className="tag";g.textContent="Shared";h.appendChild(g);}c.appendChild(h);}
-    const m=document.createElement("div");m.className="meta";m.textContent=(t.cloudAt&&!t.cloudDirty?"☁️ ":(isPremium()&&!t.sample&&!t.private?"⏳ ":""))+(t.audio?"🎙️ ":"")+fmtDate(t.created)+" · "+fmtDist(st.d)+" · "+fmtDur(st.dur)+" · "+st.stops+(st.stops===1?" stop":" stops");c.appendChild(m);
+    const m=document.createElement("div");m.className="meta";m.textContent=(t.cloudAt&&!t.cloudDirty?"☁️ ":(isPremium()&&!t.sample&&!t.private?"⏳ ":""))+(t.audio?"🎙️ ":"")+fmtDate(t.created)+" · "+fmtDist(st.d)+" · "+fmtDur(st.dur)+(tripMode(t)?(tripMode(t)==="walk"?" on foot":" by vehicle"):"")+" · "+st.stops+(st.stops===1?" stop":" stops");c.appendChild(m);
+    {const tl=timesLine(t);if(tl){const tm=document.createElement("div");tm.className="meta";tm.title="About how long this route takes on foot, by okada or keke, and by car";tm.textContent="About: "+tl;c.appendChild(tm);}}
     if(S.savedId===t.id){const ok=document.createElement("span");ok.className="note";ok.style.color="var(--accent)";ok.style.fontWeight="700";ok.textContent="✓ Saved";c.appendChild(ok);}
     if(S.editId!==t.id&&noteOf(t)){const nb=document.createElement("p");nb.className="tnote";nb.textContent="📝 "+noteOf(t);c.appendChild(nb);}
     const r=document.createElement("div");r.className="row";
